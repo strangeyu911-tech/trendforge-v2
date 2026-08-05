@@ -167,14 +167,20 @@ function renderArticle(c) {
   return `<div class="panel article-body">
     <p style="color:#77809a;font-size:13px;margin-bottom:10px">${esc(c.summary)}</p>${sections}
     <h4 style="margin-top:24px">证据集 (${(c.evidences || []).length})</h4>
-    ${(c.evidences || []).map(e => `<p style="font-size:12px;color:#77809a">[${e.ev_id}] ${esc(e.source)} · 可信度${e.credibility} · ${esc(e.doc_title.slice(0, 50))}</p>`).join('')}
+    ${(c.evidences || []).map(e => `<p style="font-size:12px;color:#77809a"><span class="rank">#${evNum(e.ev_id)}</span> ${esc(e.source)} · 可信度${e.credibility} · ${esc(e.doc_title.slice(0, 50))}</p>`).join('')}
   </div>`;
 }
 
+const evNum = (id) => { const m = String(id || '').match(/\d+/); return m ? parseInt(m[0], 10) : ''; };
+
 function linkifyEv(html, evs) {
   const map = {}; (evs || []).forEach(e => map[e.ev_id] = e);
-  return html.replace(/\[(ev_\d+)\]/g, (m, id) =>
-    map[id] ? `<span class="ev-ref" title="${esc(map[id].source)}：${esc(map[id].text.slice(0, 120))}">[${id}]</span>` : m);
+  // 正文引用改为上标编号（保留来源 tooltip），去掉 [ev_xxx] 代码感
+  return html.replace(/\[(ev_\d+)\]/g, (m, id) => {
+    const e = map[id];
+    if (!e) return m;
+    return `<sup class="cite" title="${esc(e.source)}：${esc(e.text.slice(0, 120))}">${evNum(id)}</sup>`;
+  });
 }
 
 function renderBrief(b) {
@@ -293,17 +299,78 @@ async function kbView() {
       <div class="panel"><h3>类目分布</h3>${Object.entries(s.by_category).map(([k, v]) => `<span class="tag">${k} × ${v}</span>`).join('')}</div>
       <div class="panel"><h3>检索演示</h3>
         <div class="toolbar"><input id="kb-q" placeholder="试试：AI agent / 电动车 出口" style="width:340px"><button class="btn" id="kb-go">检索</button></div>
-        <div id="kb-results"></div></div>`;
+        <div id="kb-results"></div></div>
+      <div class="panel"><h3>知识库治理（AI 提议 · 人审闸门）</h3>
+        <div id="kb-fresh" class="loading">加载新鲜度…</div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn" id="kb-curate">运行 KBCurator 策展</button>
+          <button class="btn ghost" id="kb-reload">刷新</button>
+        </div>
+        <div id="kb-patch"></div>
+        <div id="kb-history" style="margin-top:18px"></div>
+      </div>`;
     document.getElementById('kb-go').onclick = async () => {
       const q = document.getElementById('kb-q').value.trim();
       if (!q) return;
       const r = await API.kbSearch(q);
       document.getElementById('kb-results').innerHTML = r.results.map((e, i) =>
         `<div class="finding"><span class="rank">#${i + 1}</span> <b>${esc(e.doc_title)}</b>
-           <span class="tag gray">${esc(e.source)}</span>${e.published_at ? ` <span class="tag gray">${esc(String(e.published_at).slice(0, 10))}</span>` : ''}${e.credibility ? ` <span class="tag gray">可信度 ${e.credibility}</span>` : ''} · score ${e.score}<br>
+           <span class="tag gray">${esc(e.source)}</span>${e.published_at ? ` <span class="tag gray">${esc(String(e.published_at).slice(0, 10))}</span>` : ''}${e.credibility ? ` <span class="tag gray">可信度 ${e.credibility}</span>` : ''}
+           ${e.is_stale ? '<span class="tag orange">⚠ 待核实</span>' : ''} · score ${e.score}<br>
          <span style="color:#77809a">${esc(e.text.slice(0, 140))}…</span></div>`).join('') || '无结果';
     };
+    document.getElementById('kb-curate').onclick = () => runCurate();
+    document.getElementById('kb-reload').onclick = () => loadGovernance();
+    loadGovernance();
   } catch (e) { root.innerHTML = errBox(e); }
+}
+
+async function loadGovernance() {
+  try {
+    const [f, p] = await Promise.all([API.kbFreshness(), API.kbPatches()]);
+    document.getElementById('kb-fresh').innerHTML =
+      `参考日期 <b>${esc(f.ref_date)}</b> · 有效文档 <b>${f.total}</b> · 过期 <b style="color:#e08a00">${f.stale.length}</b> 篇
+       <div style="margin-top:8px">${Object.entries(f.by_category).map(([k, v]) => `<span class="tag">${k} × ${v}</span>`).join('')}</div>`;
+    renderPatch(p.patches[0]);
+    document.getElementById('kb-history').innerHTML = '<h4 style="margin:6px 0 8px">历史补丁</h4>' +
+      (p.patches.length ? p.patches.map(h => `<div class="finding" style="background:#f6f8fc">
+        <span class="tag ${h.status === 'approved' ? 'green' : h.status === 'rejected' ? 'red' : 'orange'}">${h.status}</span>
+        ${esc(h.rationale.slice(0, 80))} · ${h.items.length} 项 · ${h.created_at.slice(5, 16).replace('T', ' ')}</div>`).join('') : '<span style="color:#77809a;font-size:12px">暂无</span>');
+  } catch (e) { document.getElementById('kb-fresh').innerHTML = errBox(e); }
+}
+
+async function runCurate() {
+  const box = document.getElementById('kb-patch');
+  box.innerHTML = 'KBCurator 扫描中…';
+  try {
+    const r = await API.kbCurate();
+    renderPatch({ ...r, status: 'pending', created_at: '' });
+  } catch (e) { box.innerHTML = errBox(e); }
+}
+
+function renderPatch(p) {
+  const box = document.getElementById('kb-patch');
+  if (!p || !p.items || !p.items.length) { box.innerHTML = '<span style="color:#77809a;font-size:12px">暂无待审补丁（先点「运行 KBCurator 策展」）</span>'; return; }
+  box.innerHTML = `<div style="margin:6px 0 8px"><b>待审补丁</b> <span class="tag orange">${esc(p.status)}</span></div>
+    <div style="font-size:12px;color:#55607a;margin-bottom:8px">${esc(p.rationale)}</div>
+    ${p.items.map((it, i) => `<div class="finding" style="background:${it.action === 'retire' ? '#fff3e0' : '#e3f8f2'}">
+      <span class="tag ${it.action === 'retire' ? 'orange' : 'green'}">${it.action === 'retire' ? '退役' : '入库'}</span>
+      <b>${esc(it.title || it.replaces || '')}</b>${it.source ? ` · ${esc(it.source)}` : ''}
+      <div style="font-size:12px;color:#77809a;margin-top:3px">${esc(it.reason)}</div>
+    </div>`).join('')}
+    <div class="toolbar" style="margin-top:6px">
+      <button class="btn" id="kb-approve">✅ 人审通过（入库）</button>
+      <button class="btn ghost" id="kb-reject">❌ 拒绝</button>
+    </div>`;
+  document.getElementById('kb-approve').onclick = async () => {
+    const r = await API.kbApprove(p.patch_id);
+    if (r.ok) { alert(`已入库：新增 ${r.added} 篇、退役 ${r.retired} 篇`); loadGovernance(); }
+    else alert(r.error || '失败');
+  };
+  document.getElementById('kb-reject').onclick = async () => {
+    const r = await API.kbReject(p.patch_id);
+    if (r.ok) loadGovernance(); else alert(r.error || '失败');
+  };
 }
 
 /* ---------- 工具 ---------- */
