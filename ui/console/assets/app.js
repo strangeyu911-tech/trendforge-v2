@@ -285,7 +285,8 @@ async function contentDetail(id) {
       <h1 class="page-title">${esc(c.title)}</h1>
       <p class="page-sub"><span class="tag">${c.market}</span> <span class="tag gray">${c.language}</span>
         质量 ${c.quality_avg?.toFixed(1) || '-'}/5 · 裁决 ${esc(VERDICT_LABEL[c.verdict] || c.verdict || '-')}
-        ${c.is_fallback ? '<span class="tag orange">含兜底环节</span>' : ''}</p>
+        ${c.is_fallback ? '<span class="tag orange">含兜底环节</span>' : ''}
+        ${c.verdict === 'revise' ? '<button id="btn-revise" class="btn-primary">按修改意见重写</button>' : ''}</p>
       <div class="tabs">
         <a data-tab="article" class="active">母稿</a><a data-tab="brief">选题简报</a>
         <a data-tab="formats">多形态 (${Object.keys(c.formats || {}).length})</a>
@@ -298,6 +299,8 @@ async function contentDetail(id) {
       ZH.tab = a.dataset.tab;
       paintTab();
     });
+    const btnRevise = document.getElementById('btn-revise');
+    if (btnRevise) btnRevise.onclick = () => doRevise(c.id, btnRevise);
     paintTab();
     if (ZH.content?.needs_zh) ensureZh();  // 非中文市场：按需生成中文对照（含分发计划+质量）
   } catch (e) { root.innerHTML = errBox(e); }
@@ -338,6 +341,23 @@ async function ensureZh() {
     ZH.reason = `回译请求失败（${e.message}）`;
   }
   paintTab();
+}
+
+/* 按总编修改意见就地重写：调用修订端点，成功后重载详情并刷新中文对照 */
+async function doRevise(id, btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '重写中…';
+  try {
+    const updated = await API.contentRevise(id);
+    await contentDetail(id);  // 重载详情，拉取最新内容
+    if (updated.needs_zh) { ZH.status = 'none'; ZH.data = null; ensureZh(); }
+  } catch (e) {
+    alert(`修订失败：${e.message}`);
+    btn.disabled = false;
+    btn.textContent = old;
+  }
 }
 
 function bindZhBar() {
