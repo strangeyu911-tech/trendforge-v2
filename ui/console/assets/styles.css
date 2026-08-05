@@ -42,6 +42,9 @@ a.link { color:#2f4bd7; text-decoration:none; cursor:pointer; }
        font-size:14px; cursor:pointer; }
 .btn:disabled { opacity:.5; cursor:default; }
 .btn.ghost { background:#fff; color:#2f4bd7; border:1px solid #c8d2f5; }
+.btn-primary { padding:5px 14px; border:none; border-radius:8px; background:#2f4bd7; color:#fff;
+              font-size:13px; cursor:pointer; margin-left:8px; vertical-align:middle; }
+.btn-primary:disabled { opacity:.5; cursor:default; }
 select, input { padding:9px 12px; border:1px solid #d5dbea; border-radius:9px; font-size:14px; background:#fff; }
 .toolbar { display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
 .job-box { background:#f0f4ff; border:1px solid #d3ddfb; border-radius:10px; padding:14px 18px;

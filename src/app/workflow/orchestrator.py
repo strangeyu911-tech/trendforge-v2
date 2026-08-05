@@ -30,6 +30,24 @@ class PipelineRejected(Exception):
     pass
 
 
+async def run_revise_rounds(ctx: RunContext, data: dict) -> tuple[dict, int]:
+    """重跑 Produce 段子链做修订（Writer→FactChecker→Editor），沿用生成时回退逻辑。
+
+    data 需含：brief / evidences / article / fact_check / review。
+    返回 (更新后的 data, 实际执行的修订轮数)。
+    """
+    rounds = 0
+    while data.get("review", {}).get("verdict") == "revise" and ctx.review_rounds < settings.max_review_rounds:
+        ctx.review_rounds += 1
+        rounds += 1
+        rewrite_inputs = dict(data)
+        rewrite_inputs["editor_feedback"] = data["review"].get("revision_advice", "")
+        data.update(await WriterAgent()._exec(ctx, rewrite_inputs))
+        data.update(await FactCheckerAgent()._exec(ctx, data))
+        data.update(await EditorAgent()._exec(ctx, data))
+    return data, rounds
+
+
 async def run_pipeline(market_code: str) -> dict:
     """端到端跑一次供给流水线，返回 {task_id, content_id}"""
     async with SessionLocal() as session:
@@ -60,13 +78,7 @@ async def run_pipeline(market_code: str) -> dict:
                     data.update(await FactCheckerAgent()._exec(ctx, data))
                     data.update(await EditorAgent()._exec(ctx, data))
                     # Editor 回退循环
-                    while data["review"]["verdict"] == "revise" and ctx.review_rounds < settings.max_review_rounds:
-                        ctx.review_rounds += 1
-                        rewrite_inputs = dict(data)
-                        rewrite_inputs["editor_feedback"] = data["review"].get("revision_advice", "")
-                        data.update(await WriterAgent()._exec(ctx, rewrite_inputs))
-                        data.update(await FactCheckerAgent()._exec(ctx, data))
-                        data.update(await EditorAgent()._exec(ctx, data))
+                    data, _ = await run_revise_rounds(ctx, data)
                     if data["review"]["verdict"] == "reject":
                         raise PipelineRejected(f"总编 reject：{data['review'].get('comments', '')[:80]}")
                     break  # pass，跳出重试循环

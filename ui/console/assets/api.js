@@ -24,6 +24,7 @@ const API = {
   contents: (market = '') => req(`/contents${market ? '?market=' + market : ''}`),
   content: (id) => req(`/contents/${id}`),
   contentZh: (id, refresh = false) => req(`/contents/${id}/zh${refresh ? '?refresh=true' : ''}`, { method: 'POST' }),
+  contentRevise: (id) => req(`/contents/${id}/revise`, { method: 'POST' }),
   trace: (id) => req(`/contents/${id}/trace`),
   simulate: (contentId) => req('/analytics/events/simulate', { method: 'POST', body: JSON.stringify({ content_id: contentId || null }) }),
   analyticsOverview: () => req('/analytics/overview'),
