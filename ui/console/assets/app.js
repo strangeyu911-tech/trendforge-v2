@@ -409,9 +409,14 @@ function zhBar(c) {
 function bi(src, zh) {
   const s = String(src == null ? '' : src);
   const z = String(zh == null ? '' : zh).trim();
-  if (!ZH.content?.needs_zh || ZH.mode === 'src' || !z) return esc(s);
-  if (ZH.mode === 'zh') return esc(z);
-  // 译文与原文一致（多为纯数字、品牌名、hashtag）时不重复占一行
+  if (!ZH.content?.needs_zh || ZH.mode === 'src') return esc(s);
+  if (ZH.mode === 'zh') {
+    if (z) return esc(z);
+    // 中文对照尚未就绪（生成中/无缓存）：占位，避免闪现英文原文
+    if (ZH.status === 'loading' || ZH.status === 'none') return '<span class="zh-loading">（中文对照生成中…）</span>';
+    return esc(s);  // 不可用/缺译文：回退原文
+  }
+  // both 双语对照
   if (z === s.trim()) return esc(s);
   return `${esc(s)}<span class="zh-line">${esc(z)}</span>`;
 }
