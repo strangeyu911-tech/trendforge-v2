@@ -362,6 +362,8 @@ function bi(src, zh) {
   const z = String(zh == null ? '' : zh).trim();
   if (!ZH.content?.needs_zh || ZH.mode === 'src' || !z) return esc(s);
   if (ZH.mode === 'zh') return esc(z);
+  // 译文与原文一致（多为纯数字、品牌名、hashtag）时不重复占一行
+  if (z === s.trim()) return esc(s);
   return `${esc(s)}<span class="zh-line">${esc(z)}</span>`;
 }
 
@@ -389,6 +391,12 @@ function linkifyEv(html, evs) {
   });
 }
 
+// 风格是枚举而非自由文本，用固定映射给中文运营看，不必花 LLM 额度回译
+const STYLE_LABEL = {
+  deep_dive: '深度解析', explainer: '科普解释', news_roundup: '资讯汇总',
+  opinion: '观点评论', listicle: '清单体', how_to: '教程指南',
+};
+
 function renderBrief(c) {
   const b = c.brief;
   if (!b) return '<div class="panel">无简报</div>';
@@ -402,7 +410,7 @@ function renderBrief(c) {
       <dt>角度</dt><dd>${bi(b.angle, z.angle)}</dd>
       <dt>钩子</dt><dd>${bi(b.hook, z.hook)}</dd>
       <dt>受众</dt><dd>${bi(b.audience, z.audience)}</dd>
-      <dt>风格</dt><dd><span class="tag gray">${esc(b.style)}</span></dd>
+      <dt>风格</dt><dd><span class="tag gray">${esc(STYLE_LABEL[b.style] || b.style || '—')}</span></dd>
       <dt>why now</dt><dd>${bi(b.why_now, z.why_now)}</dd>
       <dt>避免事项</dt><dd>${avoid.length ? avoid.map(a => `<span class="tag red block">${a}</span>`).join('') : '—'}</dd>
       <dt>检索关键词</dt><dd>${kw.length ? kw.map(k => `<span class="tag gray block">${k}</span>`).join('') : '—'}</dd>
