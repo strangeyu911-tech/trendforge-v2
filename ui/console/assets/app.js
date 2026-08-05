@@ -132,7 +132,124 @@ const RunState = {
   },
 };
 
+/* ---------- 全局内容修订任务状态 ----------
+   与 RunState 完全同构：轮询与状态存活于视图之外（模块级 + localStorage），
+   切换页面/刷新浏览器都不会中断正在运行的重写，侧边栏「内容」导航常驻徽标。 */
+const REVISE_KEY = 'tf_active_revise';
+
+const ReviseState = {
+  job: null,      // {job_id, content_id, title, status, progress, error, started_at, updated_at}
+  timer: null,
+  miss: 0,
+
+  init() {
+    try { this.job = JSON.parse(localStorage.getItem(REVISE_KEY) || 'null'); } catch (e) { this.job = null; }
+    if (this.job && (this.job.status === 'running' || this.job.status === 'starting')) this.startPolling();
+    this.paint();
+  },
+
+  set(patch) {
+    this.job = Object.assign({}, this.job, patch, { updated_at: Date.now() });
+    try { localStorage.setItem(REVISE_KEY, JSON.stringify(this.job)); } catch (e) { }
+    this.paint();
+  },
+
+  clear() {
+    this.stopPolling();
+    this.job = null;
+    try { localStorage.removeItem(REVISE_KEY); } catch (e) { }
+    this.paint();
+  },
+
+  startPolling() {
+    if (this.timer) return;               // 全局唯一，杜绝重复 timer 泄漏
+    this.miss = 0;
+    this.timer = setInterval(() => this.tick(), 5000);
+  },
+
+  stopPolling() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  },
+
+  async tick() {
+    if (!this.job || !this.job.job_id) { this.stopPolling(); return; }
+    let j;
+    try { j = await API.contentReviseJob(this.job.job_id); }
+    catch (e) { this.paint(); return; }   // 网络抖动/冷启动：保持轮询，下次再试
+    const here = () => currentView() === 'content' && contentIdFromHash() === this.job.content_id;
+    if (j.status === 'done') {
+      this.stopPolling();
+      this.set({ status: 'done' });
+      if (here()) await contentDetail(this.job.content_id);
+      setTimeout(() => { if (this.job && this.job.status === 'done') this.clear(); }, 5000);
+    } else if (j.status === 'failed') {
+      this.stopPolling();
+      this.set({ status: 'failed', error: j.error || '未知错误' });
+      if (here()) await contentDetail(this.job.content_id);
+    } else if (j.status === 'unknown') {
+      // 免费层休眠/重启会丢失内存任务表：若内容已回到 published 说明任务其实跑完了
+      let published = false;
+      try { const c = await API.content(this.job.content_id); published = (c.status === 'published'); } catch (e) { }
+      if (published) {
+        this.stopPolling();
+        this.set({ status: 'done' });
+        if (here()) await contentDetail(this.job.content_id);
+        setTimeout(() => { if (this.job && this.job.status === 'done') this.clear(); }, 5000);
+      } else if (++this.miss >= 3) {
+        this.stopPolling(); this.set({ status: 'lost' });
+      } else this.paint();
+    } else {
+      this.miss = 0;
+      this.set({ status: 'running', progress: j.progress || this.job.progress || 'Agent 执行中' });
+    }
+  },
+
+  paint() { this.paintBadge(); this.paintInline(); },
+
+  paintBadge() {
+    const link = document.querySelector('#sidebar nav a[data-view="contents"]');
+    if (!link) return;
+    let b = link.querySelector('.nav-badge');
+    const j = this.job;
+    const map = { running: ['重写中', 'running'], starting: ['重写中', 'running'], done: ['完成', 'done'], failed: ['失败', 'failed'], lost: ['失联', 'failed'] };
+    const hit = j && map[j.status];
+    if (!hit) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'nav-badge'; link.appendChild(b); }
+    b.textContent = hit[0];
+    b.className = `nav-badge ${hit[1]}`;
+  },
+
+  paintInline() {
+    const el = document.getElementById('revise-status');
+    if (!el) return;                       // 当前不在该内容详情页
+    const btn = document.getElementById('btn-revise');
+    const j = this.job;
+    const activeHere = j && j.content_id === contentIdFromHash();
+    if (!activeHere) { el.style.display = 'none'; if (btn) btn.style.display = ''; return; }
+    if (btn) btn.style.display = 'none';
+    el.style.display = '';
+    if (j.status === 'starting') {
+      el.className = 'revise-status'; el.innerHTML = '⏳ 发起重写任务…';
+    } else if (j.status === 'running') {
+      el.className = 'revise-status';
+      el.innerHTML = `⏳ 正在按修改意见重写 · 当前环节：<b>${esc(j.progress || 'Agent 执行中')}</b>
+        <span class="job-elapsed">已运行 ${fmtElapsed(j.started_at)}</span>
+        <br><small style="color:#77809a">任务在服务端运行，切换页面或刷新浏览器都不会中断，可随时回来查看进度。</small>`;
+    } else if (j.status === 'done') {
+      el.className = 'revise-status done'; el.innerHTML = `✅ 重写完成，内容已更新（可再次点击「按修改意见重写」重跑）`;
+    } else if (j.status === 'failed') {
+      el.className = 'revise-status failed'; el.innerHTML = `❌ 重写失败：${esc(j.error || '')}`;
+    } else if (j.status === 'lost') {
+      el.className = 'revise-status failed'; el.innerHTML = `⚠️ 运行状态失联（后端可能已重启）。内容状态仍可在本页查看；如长时间无更新，请重新点击「按修改意见重写」。`;
+    } else {
+      el.style.display = 'none';
+    }
+  },
+};
+
 function currentView() { return (location.hash.slice(1) || 'overview').split('/')[0]; }
+
+function contentIdFromHash() { const h = location.hash.slice(1).split('/'); return h[0] === 'content' ? h[1] : null; }
 
 function fmtElapsed(from, to) {
   if (!from) return '—';
@@ -287,6 +404,7 @@ async function contentDetail(id) {
         质量 ${c.quality_avg?.toFixed(1) || '-'}/5 · 裁决 ${esc(VERDICT_LABEL[c.verdict] || c.verdict || '-')}
         ${c.is_fallback ? '<span class="tag orange">含兜底环节</span>' : ''}
         ${c.verdict === 'revise' ? '<button id="btn-revise" class="btn-primary">按修改意见重写</button>' : ''}</p>
+      ${c.verdict === 'revise' ? '<div id="revise-status" class="revise-status" style="display:none"></div>' : ''}
       <div class="tabs">
         <a data-tab="article" class="active">母稿</a><a data-tab="brief">选题简报</a>
         <a data-tab="formats">多形态 (${Object.keys(c.formats || {}).length})</a>
@@ -300,7 +418,8 @@ async function contentDetail(id) {
       paintTab();
     });
     const btnRevise = document.getElementById('btn-revise');
-    if (btnRevise) btnRevise.onclick = () => doRevise(c.id, btnRevise);
+    if (btnRevise) btnRevise.onclick = () => startRevise(c.id, c.title);
+    ReviseState.paint();  // 还原进行中的重写状态（切回来不会"看起来停了"）
     paintTab();
     if (ZH.content?.needs_zh) ensureZh();  // 非中文市场：按需生成中文对照（含分发计划+质量）
   } catch (e) { root.innerHTML = errBox(e); }
@@ -343,34 +462,20 @@ async function ensureZh() {
   paintTab();
 }
 
-/* 按总编修改意见就地重写：提交后台任务并轮询，完成后重载详情并刷新中文对照 */
-async function doRevise(id, btn) {
-  if (btn.disabled) return;
-  btn.disabled = true;
-  const old = btn.textContent;
-  btn.textContent = '重写中…';
+/* 按总编修改意见就地重写：提交后台任务，状态交由全局 ReviseState 持续轮询/展示
+   （与 RunState 同构：轮询存活于视图之外，切页面/刷新不中断，侧边栏常驻徽标）。 */
+async function startRevise(id, title) {
+  if (ReviseState.job && (ReviseState.job.status === 'running' || ReviseState.job.status === 'starting')) return;
+  ReviseState.clear();
+  ReviseState.set({ status: 'starting', job_id: null, content_id: id, title, started_at: Date.now() });
   try {
     const r = await API.contentRevise(id);
     const jobId = r.job_id;
     if (!jobId) throw new Error('未获取到任务编号');
-    // 轮询任务状态（慢速 LLM，最多约 3 分钟）
-    let job;
-    for (let i = 0; i < 60; i++) {
-      await new Promise(res => setTimeout(res, 3000));
-      job = await API.contentReviseJob(jobId);
-      if (job.status === 'done' || job.status === 'failed') break;
-    }
-    if (job && job.status === 'done') {
-      const fresh = await API.content(id);
-      await contentDetail(id);  // 重载详情，拉取最新内容
-      if (fresh.needs_zh) { ZH.status = 'none'; ZH.data = null; ensureZh(); }
-    } else {
-      throw new Error((job && job.error) || '修订超时，请稍后重试');
-    }
+    ReviseState.set({ status: 'running', job_id: jobId, started_at: Date.now() });
+    ReviseState.startPolling();
   } catch (e) {
-    alert(`修订失败：${e.message}`);
-    btn.disabled = false;
-    btn.textContent = old;
+    ReviseState.set({ status: 'failed', error: e.message });
   }
 }
 
@@ -794,6 +899,7 @@ function errBox(e) { return `<div class="panel" style="color:#d43d3d">加载失�
 /* ---------- 启动 ---------- */
 (async () => {
   RunState.init();   // 先恢复未完成的供给任务（刷新浏览器也能续上轮询）
+  ReviseState.init(); // 恢复进行中的内容重写状态
   route();
   try {
     const h = await API.health();

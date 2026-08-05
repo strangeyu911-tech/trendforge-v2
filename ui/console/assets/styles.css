@@ -45,6 +45,10 @@ a.link { color:#2f4bd7; text-decoration:none; cursor:pointer; }
 .btn-primary { padding:5px 14px; border:none; border-radius:8px; background:#2f4bd7; color:#fff;
               font-size:13px; cursor:pointer; margin-left:8px; vertical-align:middle; }
 .btn-primary:disabled { opacity:.5; cursor:default; }
+.revise-status { background:#f0f4ff; border:1px solid #d3ddfb; border-radius:10px; padding:14px 18px;
+                font-size:13.5px; margin-top:14px; display:none; line-height:1.7; }
+.revise-status.done { background:#e3f8f2; border-color:#bfeedd; color:#0d9268; }
+.revise-status.failed { background:#ffeaea; border-color:#ffcfcf; color:#d43d3d; }
 select, input { padding:9px 12px; border:1px solid #d5dbea; border-radius:9px; font-size:14px; background:#fff; }
 .toolbar { display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
 .job-box { background:#f0f4ff; border:1px solid #d3ddfb; border-radius:10px; padding:14px 18px;
