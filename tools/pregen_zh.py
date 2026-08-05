@@ -5,9 +5,15 @@ demo_snapshot.db 重建运行库。若中文对照只在运行时按需生成，
 第一位访客又要等 20–40 秒。把演示内容的对照预生成并提交进快照，
 线上就永远是秒开、零额度消耗。
 
-用法（需要 LLM key）：
+两种用法：
+
+1）本地有 LLM key —— 直接调模型生成
     DEEPSEEK_API_KEY=sk-xxx python tools/pregen_zh.py
     DEEPSEEK_API_KEY=sk-xxx python tools/pregen_zh.py --refresh   # 覆盖已有对照
+
+2）本地没有 key，但线上服务有 —— 从线上把已生成的对照拉回来回灌
+    python tools/pregen_zh.py --from-api https://trendforge-v2-api.onrender.com
+    （脚本会先 POST /contents/{id}/zh 让线上生成，再把结果写回本地快照）
 
 之后把 src/app/data/demo_snapshot.db 一起提交即可。
 """
@@ -28,6 +34,20 @@ from app.services.zh_mirror import BRIEF_FIELDS, translate_source  # noqa: E402
 SNAPSHOT = ROOT / "src" / "app" / "data" / "demo_snapshot.db"
 
 
+async def fetch_from_api(base: str, cid: str, refresh: bool):
+    """向线上服务要中文对照（线上配了 key，本地不用）"""
+    import httpx
+
+    url = f"{base.rstrip('/')}/api/contents/{cid}/zh" + ("?refresh=true" if refresh else "")
+    async with httpx.AsyncClient(timeout=300) as client:
+        r = await client.post(url)
+        r.raise_for_status()
+        data = r.json()
+    if not data.get("available"):
+        raise RuntimeError(data.get("reason") or "线上未返回可用对照")
+    return data["translation"]
+
+
 def ensure_column(conn: sqlite3.Connection) -> None:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(contents)")}
     if "translation" not in cols:
@@ -36,9 +56,11 @@ def ensure_column(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
-async def main(refresh: bool = False) -> int:
-    if not settings.llm_api_key:
-        print("✗ 未配置 DEEPSEEK_API_KEY / TF_LLM_API_KEY，无法预生成")
+async def main(refresh: bool = False, api_base: str | None = None) -> int:
+    if not api_base and not settings.llm_api_key:
+        print("✗ 未配置 DEEPSEEK_API_KEY / TF_LLM_API_KEY")
+        print("  本地没有 key 时，可改用线上服务生成：")
+        print("  python tools/pregen_zh.py --from-api https://trendforge-v2-api.onrender.com")
         return 1
     if not SNAPSHOT.exists():
         print(f"✗ 找不到快照：{SNAPSHOT}")
@@ -69,20 +91,28 @@ async def main(refresh: bool = False) -> int:
             "brief": {k: b[k] for k in BRIEF_FIELDS if b.get(k)},
             "formats": json.loads(formats or "{}"),
         }
-        print(f"→ {cid[:8]} {market}/{lang} 回译中…", flush=True)
+        via = f"线上 {api_base}" if api_base else "本地 LLM"
+        print(f"→ {cid[:8]} {market}/{lang} 回译中（{via}）…", flush=True)
         try:
-            mirror, resp = await translate_source(src, market, lang)
+            if api_base:
+                mirror = await fetch_from_api(api_base, cid, refresh)
+                cost = float(mirror.get("cost_cny") or 0.0)
+            else:
+                mirror, resps = await translate_source(src, market, lang)
+                cost = sum(getattr(r, "cost_cny", 0.0) for r in resps)
+                mirror.pop("_partial", None)
+                mirror.update({"lang": "zh", "model": getattr(resps[0], "model", "") if resps else "",
+                               "cost_cny": round(cost, 6)})
         except Exception as e:
             print(f"  ✗ 失败：{str(e)[:200]}")
             failed += 1
             continue
-        mirror.update({"lang": "zh", "model": resp.model,
-                       "cost_cny": round(resp.cost_cny, 6), "generated_at": "pregen"})
+        mirror["generated_at"] = "pregen"
         conn.execute("UPDATE contents SET translation = ? WHERE id = ?",
                      (json.dumps(mirror, ensure_ascii=False), cid))
         conn.commit()
         zt = (mirror.get("brief") or {}).get("topic", "")
-        print(f"  ✓ 完成 · ¥{resp.cost_cny:.4f} · 选题中文：{zt[:40]}")
+        print(f"  ✓ 完成 · ¥{cost:.4f} · 选题中文：{zt[:40]}")
         done += 1
 
     conn.close()
@@ -92,4 +122,9 @@ async def main(refresh: bool = False) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main("--refresh" in sys.argv)))
+    argv = sys.argv[1:]
+    base = None
+    if "--from-api" in argv:
+        i = argv.index("--from-api")
+        base = argv[i + 1] if i + 1 < len(argv) else "https://trendforge-v2-api.onrender.com"
+    sys.exit(asyncio.run(main("--refresh" in argv, base)))
