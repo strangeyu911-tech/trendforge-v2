@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from app.llm import get_llm
@@ -16,6 +17,51 @@ from app.prompts.manager import get_pm
 
 # 只回译"人读得懂才有意义"的字段；style/format_plan 是枚举，回译反而丢失原义
 BRIEF_FIELDS = ("topic", "angle", "hook", "audience", "why_now", "avoid", "keywords")
+
+# 时区缩写 → 中文表述（按市场常见用法；命中即采用，避免裸英文缩写）
+_TZ_TOKENS = [
+    ("ET", "美东时间"), ("EST", "美东时间"),
+    ("PT", "美西时间"), ("PST", "美西时间"),
+    ("JST", "日本时间"), ("GMT+9", "日本时间"),
+    ("CST", "北京时间"), ("GMT+8", "北京时间"), ("BST", "英国时间"),
+]
+# 一天内的时刻（带 am/pm），需翻成中文；可选范围 X-Y
+_TIME_RE = re.compile(
+    r"(\d{1,2})(?::(\d{2}))?\s*(?:-\s*(\d{1,2})(?::(\d{2}))?)?\s*(am|pm)", re.I
+)
+_CN_TIME_WORD = re.compile(r"上午|下午|晚间|凌晨|中午|傍晚")
+
+
+def _norm_time_segment(m: "re.Match", has_cn: bool) -> str:
+    h1, mi1, h2, mi2, ap = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5).lower()
+
+    def fmt(h, mi):
+        return f"{h}:{mi}" if mi else f"{h}"
+
+    seg = f"{fmt(h1, mi1)}-{fmt(h2, mi2)}" if h2 else fmt(h1, mi1)
+    # 已有中文时段词（晚间/凌晨…）就不再加 上午/下午，避免「晚间下午7点」这类冗余
+    prefix = "" if has_cn else ("上午" if ap == "am" else "下午")
+    return f"{prefix}{seg}点"
+
+
+def _normalize_timing(s: str, market: str = "") -> str:
+    """把分发时段的英文时刻/时区归一化为纯中文（LLM 不一定可靠，这里兜底）。
+    例：'工作日 9-11am ET' → '工作日美东时间上午9-11点'；'晚间 7-10pm' → '晚间7-10点'。"""
+    if not isinstance(s, str) or not s.strip():
+        return s
+    tz = None
+    for tok, lab in _TZ_TOKENS:
+        if re.search(r"(?<![A-Za-z])" + re.escape(tok) + r"(?![A-Za-z])", s):
+            tz = lab
+            s = re.sub(r"(?<![A-Za-z])" + re.escape(tok) + r"(?![A-Za-z])", " ", s)
+            break
+    has_cn = bool(_CN_TIME_WORD.search(s))
+    s = _TIME_RE.sub(lambda m: _norm_time_segment(m, has_cn), s)
+    s = re.sub(r"\s+", " ", s).strip()
+    if tz and tz not in s:
+        s = f"{s}（{tz}）" if _CN_TIME_WORD.search(s) or re.search(r"[一-鿿]", s) else f"{tz}{s}"
+    return s
+
 
 
 def _align(orig, zh):
@@ -155,6 +201,11 @@ async def ensure_zh_mirror(session, content: Content, *, refresh: bool = False) 
     except Exception as e:  # 翻译失败不能拖垮内容详情页
         return {"available": False, "cached": False,
                 "reason": f"回译失败：{str(e)[:160]}", "translation": cached}
+
+    # 兜底：分发时段的英文时刻/时区归一化为纯中文（LLM 未必可靠）
+    for p in (mirror.get("distribution", {}) or {}).get("plan") or []:
+        if p.get("timing"):
+            p["timing"] = _normalize_timing(p["timing"], content.market)
 
     partial = mirror.pop("_partial", None)
     mirror.update({
