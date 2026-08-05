@@ -61,7 +61,15 @@ async def job_status(job_id: str):
     if not job:
         return {"status": "unknown"}
     out = dict(job)
-    # 附带 DB 任务进度（当前 agent）
+    # 运行中：附带 DB 任务的实时进度（当前 agent）
+    if job["status"] == "running":
+        async with SessionLocal() as session:
+            t = (await session.execute(
+                select(Task).where(Task.status == "running")
+                .order_by(Task.created_at.desc()).limit(1))).scalars().first()
+            if t:
+                out["progress"] = t.progress
+                out["task_id"] = t.id
     if job.get("result") and job["result"].get("task_id"):
         out["task_id"] = job["result"]["task_id"]
     return out

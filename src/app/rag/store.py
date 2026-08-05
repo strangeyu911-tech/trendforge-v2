@@ -127,6 +127,17 @@ async def retrieve(session: AsyncSession, query: str, *, top_k: int = 10,
     return out
 
 
+async def retrieve_scores(ctx, candidates: list[dict], query: str) -> list[tuple[dict, float]]:
+    """对已召回的候选证据按新 query 重新打 BM25 分（主题相关性过滤用）"""
+    if not candidates:
+        return []
+    bm = BM25().fit([c["text"] for c in candidates])
+    scores = bm.scores(query)
+    pairs = list(zip(candidates, scores))
+    pairs.sort(key=lambda x: x[1], reverse=True)
+    return pairs
+
+
 async def recent_documents(session: AsyncSession, days: int = 10, limit: int = 60) -> list[Document]:
     rows = await _load_chunks(session, days=None)
     docs = {d.id: d for _, d in rows}.values()

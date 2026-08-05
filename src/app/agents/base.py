@@ -102,6 +102,10 @@ class BaseAgent(ABC):
     async def _exec(self, ctx: RunContext, inputs: dict) -> dict:
         """执行 run：自动记录 Span + 决策日志 + 异常降级（主链路永不裸崩）"""
         ctx.task.progress = self.name
+        try:
+            await ctx.session.commit()  # 让外部轮询能看到当前进度
+        except Exception:
+            pass
         t0 = time.time()
         span = Span(agent=self.name, started_at=datetime.fromtimestamp(t0))
         try:

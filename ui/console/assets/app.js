@@ -80,6 +80,8 @@ async function startRun(force) {
           clearInterval(timer);
           box.innerHTML = `❌ 失败：${esc(j.error)}`;
           loadTasks();
+        } else if (j.progress) {
+          box.innerHTML = `⏳ 流水线运行中… 当前 Agent：<b>${esc(j.progress)}</b>`;
         }
       } catch (e) { /* 轮询失败继续 */ }
     }, 5000);
