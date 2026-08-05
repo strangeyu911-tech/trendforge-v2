@@ -112,7 +112,7 @@ async def revise_content(content_id: str):
         await session.commit()
 
     job_id = str(uuid.uuid4())
-    REVISE_JOBS[job_id] = {"status": "running", "content_id": content_id, "error": None}
+    REVISE_JOBS[job_id] = {"status": "running", "content_id": content_id, "error": None, "progress": "已发起"}
     asyncio.create_task(_revise_work(job_id, content_id))
     return {"job_id": job_id, "status": "running"}
 
@@ -146,8 +146,10 @@ async def _revise_work(job_id: str, content_id: str) -> None:
                 "review": {k: v for k, v in quality.items() if k != "fact_check"},
             }
             # 重跑 Produce 段子链：Writer 按修改意见重写 → FactChecker → Editor
+            REVISE_JOBS[job_id]["progress"] = "重写母稿（Writer → 事实核查 → 总编复核）"
             data, rounds = await run_revise_rounds(ctx, data)
             # 刷新多形态（正文已变，派生需同步；不重跑 Distributor，分发计划属策略层）
+            REVISE_JOBS[job_id]["progress"] = "刷新多形态（FormatAdapter）"
             data.update(await FormatAdapterAgent()._exec(ctx, data))
 
             c.title = data["article"]["title"]
@@ -163,7 +165,7 @@ async def _revise_work(job_id: str, content_id: str) -> None:
             task.finished_at = datetime.utcnow()
             await ctx.persist()
             await session.commit()
-        REVISE_JOBS[job_id] = {"status": "done", "content_id": content_id}
+        REVISE_JOBS[job_id] = {"status": "done", "content_id": content_id, "progress": "完成"}
     except BaseException as e:
         # BaseException 含 CancelledError：后台任务不受客户端断开影响；此处兜底复位状态
         REVISE_JOBS[job_id] = {"status": "failed", "error": str(e)[:300]}
