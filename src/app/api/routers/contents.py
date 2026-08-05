@@ -87,13 +87,23 @@ async def revise_content(content_id: str):
         c = await session.get(Content, content_id)
         if not c:
             raise HTTPException(404, "内容不存在")
-        if c.status == "revising":
-            raise HTTPException(409, "修订进行中，请稍后再试")
         if (c.quality or {}).get("verdict") != "revise":
             raise HTTPException(400, "仅裁决为「需修改」的内容可发起修订")
 
-        # 并发护栏：置为 revising，防止重复触发
+        # 并发护栏：置为 revising，防止重复触发。
+        # 容错：若上次修订因实例重启/客户端断开而残留 revising 状态，超过阈值则视为失效、允许重入。
+        if c.status == "revising":
+            since = (c.decision_log or {}).get("_revising_since")
+            recent = False
+            if since:
+                try:
+                    recent = (datetime.utcnow() - datetime.fromisoformat(since)).total_seconds() < 600
+                except (ValueError, TypeError):
+                    recent = False
+            if recent:
+                raise HTTPException(409, "修订进行中，请稍后再试")
         c.status = "revising"
+        c.decision_log = {**(c.decision_log or {}), "_revising_since": datetime.utcnow().isoformat()}
         await session.commit()
 
         market = await session.get(Market, c.market)
@@ -135,12 +145,18 @@ async def revise_content(content_id: str):
             task.finished_at = datetime.utcnow()
             await ctx.persist()
             await session.commit()
-        except Exception as e:
+        except BaseException as e:
+            # BaseException 含 CancelledError：客户端断开/实例重启时不留残留 revising 状态
             c.status = "published"
             task.status = "failed"
             task.error = str(e)[:500]
             task.finished_at = datetime.utcnow()
-            await session.commit()
+            try:
+                await session.commit()
+            except Exception:
+                pass
+            if isinstance(e, HTTPException):
+                raise
             raise HTTPException(500, f"修订失败：{str(e)[:200]}")
 
         return {
