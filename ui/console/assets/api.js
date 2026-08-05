@@ -30,5 +30,10 @@ const API = {
   reports: () => req('/analytics/reports'),
   kbStats: () => req('/kb/stats'),
   kbSearch: (q) => req(`/kb/search?q=${encodeURIComponent(q)}`),
+  kbFreshness: () => req('/kb/freshness'),
+  kbCurate: () => req('/kb/curate', { method: 'POST' }),
+  kbPatches: () => req('/kb/patches'),
+  kbApprove: (id) => req(`/kb/patches/${id}/approve`, { method: 'POST' }),
+  kbReject: (id) => req(`/kb/patches/${id}/reject`, { method: 'POST' }),
   prompts: () => req('/prompts'),
 };

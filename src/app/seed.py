@@ -12,7 +12,7 @@ from app.rag.store import ingest_kb
 
 
 async def seed_all() -> dict:
-    await init_db()
+    await init_db()  # 含 migrate_db：兼容旧快照补列 + TTL 回填
     async with SessionLocal() as session:
         # 1. 市场档案
         markets = json.loads((DATA_DIR / "markets.json").read_text(encoding="utf-8"))

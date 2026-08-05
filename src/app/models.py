@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -51,6 +51,10 @@ class Document(Base):
     credibility: Mapped[int] = mapped_column(Integer, default=2)  # 1官方 2权威 3一般
     published_at: Mapped[str] = mapped_column(String(16), default="")
     hash: Mapped[str] = mapped_column(String(64), unique=True)
+    # 新鲜度治理（KBCurator 用）：最后核实日期 + 有效期(天) + 是否退役
+    last_verified_at: Mapped[str] = mapped_column(String(16), default="")
+    freshness_ttl: Mapped[int] = mapped_column(Integer, default=90)
+    retired: Mapped[bool] = mapped_column(default=False)
 
 
 class Chunk(Base):
@@ -167,6 +171,44 @@ class PipelineCache(Base):
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
+class KBPatch(Base):
+    """知识库待审补丁：KBCurator 提议、人 approve 才入库（AI 提议 + 人审闸门）"""
+    __tablename__ = "kb_patches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending/approved/rejected
+    market: Mapped[str] = mapped_column(String(8), default="")          # 空=全局
+    rationale: Mapped[str] = mapped_column(Text, default="")            # 策展理由
+    items: Mapped[list] = mapped_column(JSON, default=list)            # [{action,title,source,...}]
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    decided_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+async def migrate_db() -> None:
+    """兼容旧快照：给已存在的 documents 表补加新鲜度列，并回填 last_verified_at"""
+    async with engine.begin() as conn:
+        res = await conn.execute(text("PRAGMA table_info(documents)"))
+        cols = {row[1] for row in res}
+        alters = [
+            ("last_verified_at", "ALTER TABLE documents ADD COLUMN last_verified_at VARCHAR(16) DEFAULT ''"),
+            ("freshness_ttl", "ALTER TABLE documents ADD COLUMN freshness_ttl INTEGER DEFAULT 90"),
+            ("retired", "ALTER TABLE documents ADD COLUMN retired BOOLEAN DEFAULT 0"),
+        ]
+        for col, ddl in alters:
+            if col not in cols:
+                await conn.execute(text(ddl))
+        # 回填：已存在但未核实的文档，用发布日作为首次核实日
+        await conn.execute(text(
+            "UPDATE documents SET last_verified_at = published_at "
+            "WHERE last_verified_at IS NULL OR last_verified_at = ''"))
+
+
+async def init_db() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await migrate_db()
+
+
 class PromptRecord(Base):
     __tablename__ = "prompts"
 
@@ -176,8 +218,3 @@ class PromptRecord(Base):
     content: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default="production")
     created_at: Mapped[datetime] = mapped_column(default=_now)
-
-
-async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
