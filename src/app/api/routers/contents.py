@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from app.models import Content, SessionLocal
+from app.services.zh_mirror import ensure_zh_mirror
 from app.workflow.orchestrator import get_trace
 
 router = APIRouter()
@@ -46,7 +47,23 @@ async def content_detail(content_id: str):
             "formats": c.formats, "distribution": c.distribution,
             "quality": c.quality, "decision_log": c.decision_log,
             "prompt_versions": c.prompt_versions, "task_id": c.task_id,
+            # 中文回译镜像（非中文市场才有；缺失时前端按需触发生成）
+            "translation": c.translation or {},
+            "needs_zh": not (c.language or "").lower().startswith("zh"),
         }
+
+
+@router.post("/contents/{content_id}/zh")
+async def content_zh_mirror(content_id: str, refresh: bool = False):
+    """生成/获取中文对照（供中文运营审核非中文市场产出）。
+
+    按需生成 + 缓存：不塞进供给链路，避免每条内容都白白消耗一次翻译额度。
+    """
+    async with SessionLocal() as session:
+        c = await session.get(Content, content_id)
+        if not c:
+            raise HTTPException(404, "内容不存在")
+        return await ensure_zh_mirror(session, c, refresh=refresh)
 
 
 @router.get("/contents/{content_id}/trace")

@@ -122,6 +122,9 @@ class Content(Base):
     quality: Mapped[dict] = mapped_column(JSON, default=dict)      # Rubric 评分 + fact_check
     decision_log: Mapped[dict] = mapped_column(JSON, default=dict)
     prompt_versions: Mapped[dict] = mapped_column(JSON, default=dict)
+    # 中文回译镜像：非中文市场的内容供中文运营审核用，按需生成后缓存
+    # {lang, title, summary, brief:{...}, formats:{...}, model, generated_at}
+    translation: Mapped[dict] = mapped_column(JSON, default=dict)
     is_fallback: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
@@ -185,7 +188,7 @@ class KBPatch(Base):
 
 
 async def migrate_db() -> None:
-    """兼容旧快照：给已存在的 documents 表补加新鲜度列，并回填 last_verified_at"""
+    """兼容旧快照：给已存在的表补加新增列（SQLite create_all 不会给旧表加列）"""
     async with engine.begin() as conn:
         res = await conn.execute(text("PRAGMA table_info(documents)"))
         cols = {row[1] for row in res}
@@ -201,6 +204,14 @@ async def migrate_db() -> None:
         await conn.execute(text(
             "UPDATE documents SET last_verified_at = published_at "
             "WHERE last_verified_at IS NULL OR last_verified_at = ''"))
+
+        # contents.translation：中文回译镜像
+        res = await conn.execute(text("PRAGMA table_info(contents)"))
+        ccols = {row[1] for row in res}
+        if "translation" not in ccols:
+            await conn.execute(text("ALTER TABLE contents ADD COLUMN translation JSON"))
+        await conn.execute(text(
+            "UPDATE contents SET translation = '{}' WHERE translation IS NULL"))
 
 
 async def init_db() -> None:
