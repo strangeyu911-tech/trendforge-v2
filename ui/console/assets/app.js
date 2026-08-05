@@ -250,10 +250,23 @@ function contentsTable(list) {
 }
 
 /* ---------- 内容详情 ---------- */
+/* 中文对照状态：非中文市场的产出需要给中文运营一份回译对照，按需生成 + 缓存 */
+const ZH = {
+  mode: localStorage.getItem('tf_zh_mode') || 'both',  // both 双语 | src 原文 | zh 中文
+  status: 'none',   // none 未生成 | loading | ready | unavailable
+  reason: '', data: null, content: null, tab: 'article',
+};
+
 async function contentDetail(id) {
   root.innerHTML = '<div class="loading">加载中…</div>';
   try {
     const c = await API.content(id);
+    const t = c.translation || {};
+    Object.assign(ZH, {
+      content: c, tab: 'article', reason: '',
+      data: t.brief ? t : null,
+      status: t.brief ? 'ready' : 'none',
+    });
     root.innerHTML = `
       <h1 class="page-title">${esc(c.title)}</h1>
       <p class="page-sub"><span class="tag">${c.market}</span> <span class="tag gray">${c.language}</span>
@@ -265,21 +278,94 @@ async function contentDetail(id) {
         <a data-tab="dist">分发计划</a><a data-tab="trace">Trace</a><a data-tab="quality">质量</a>
       </div>
       <div id="tab-body"></div>`;
-    const body = document.getElementById('tab-body');
-    const renderers = {
-      article: () => renderArticle(c), brief: () => renderBrief(c.brief),
-      formats: () => renderFormats(c.formats), dist: () => renderDist(c.distribution),
-      trace: () => renderTrace(c.id), quality: () => `<div class="panel"><pre class="json">${esc(JSON.stringify(c.quality, null, 2))}</pre></div>`,
-    };
     document.querySelectorAll('.tabs a').forEach(a => a.onclick = () => {
       document.querySelectorAll('.tabs a').forEach(x => x.classList.remove('active'));
       a.classList.add('active');
-      body.innerHTML = '<div class="loading">…</div>';
-      Promise.resolve(renderers[a.dataset.tab]()).then(h => body.innerHTML = h);
+      ZH.tab = a.dataset.tab;
+      paintTab();
     });
-    body.innerHTML = renderArticle(c);
+    paintTab();
   } catch (e) { root.innerHTML = errBox(e); }
 }
+
+function paintTab() {
+  const body = document.getElementById('tab-body');
+  const c = ZH.content;
+  if (!body || !c) return;
+  const renderers = {
+    article: () => renderArticle(c), brief: () => renderBrief(c),
+    formats: () => renderFormats(c), dist: () => renderDist(c.distribution),
+    trace: () => renderTrace(c.id), quality: () => renderQuality(c.quality),
+  };
+  const tab = ZH.tab;
+  const out = renderers[tab] ? renderers[tab]() : '';
+  if (out instanceof Promise) body.innerHTML = '<div class="loading">…</div>';
+  Promise.resolve(out).then(h => {
+    if (ZH.tab !== tab || ZH.content !== c) return;  // 期间已切走/换内容，丢弃这次结果
+    body.innerHTML = h;
+    bindZhBar();
+  });
+  if (['brief', 'formats'].includes(ZH.tab)) ensureZh();
+}
+
+/* 缺中文对照时按需触发生成（一次调用同时覆盖简报+多形态） */
+async function ensureZh() {
+  const c = ZH.content;
+  if (!c || !c.needs_zh || ZH.status !== 'none') return;
+  ZH.status = 'loading';
+  paintTab();
+  try {
+    const r = await API.contentZh(c.id);
+    if (r.available) { ZH.data = r.translation; ZH.status = 'ready'; }
+    else { ZH.status = 'unavailable'; ZH.reason = r.reason || '暂无中文对照'; }
+  } catch (e) {
+    ZH.status = 'unavailable';
+    ZH.reason = `回译请求失败（${e.message}）`;
+  }
+  paintTab();
+}
+
+function bindZhBar() {
+  document.querySelectorAll('[data-zhmode]').forEach(a => a.onclick = () => {
+    ZH.mode = a.dataset.zhmode;
+    localStorage.setItem('tf_zh_mode', ZH.mode);
+    paintTab();
+  });
+  const rf = document.querySelector('[data-zhrefresh]');
+  if (rf) rf.onclick = async () => {
+    ZH.status = 'loading'; paintTab();
+    try {
+      const r = await API.contentZh(ZH.content.id, true);
+      if (r.available) { ZH.data = r.translation; ZH.status = 'ready'; }
+      else { ZH.status = 'unavailable'; ZH.reason = r.reason || '暂无中文对照'; }
+    } catch (e) { ZH.status = 'unavailable'; ZH.reason = e.message; }
+    paintTab();
+  };
+}
+
+/* 语言切换条：只在非中文市场出现 */
+function zhBar(c) {
+  if (!c.needs_zh) return '';
+  const segs = [['both', '双语对照'], ['src', `${(c.language || '').toUpperCase()} 原文`], ['zh', '仅中文']]
+    .map(([k, l]) => `<a class="seg${ZH.mode === k ? ' on' : ''}" data-zhmode="${k}">${l}</a>`).join('');
+  let note = '';
+  if (ZH.status === 'loading') note = '<span class="zh-note">⏳ AI 回译生成中…（首次约 20–40 秒，之后缓存秒开）</span>';
+  else if (ZH.status === 'unavailable') note = `<span class="zh-note err">⚠ ${esc(ZH.reason)}</span>`;
+  else if (ZH.status === 'ready' && ZH.data) note = `<span class="zh-note">中文对照 · ${esc(ZH.data.model || 'AI')} 回译 · <a class="link" data-zhrefresh="1">重新生成</a></span>`;
+  return `<div class="zh-bar"><span class="zh-lab">🌏 面向中文运营的对照视图</span>
+    <div class="seg-group">${segs}</div>${note}</div>`;
+}
+
+/* 双语文本：原文 + 中文对照（按当前模式） */
+function bi(src, zh) {
+  const s = String(src == null ? '' : src);
+  const z = String(zh == null ? '' : zh).trim();
+  if (!ZH.content?.needs_zh || ZH.mode === 'src' || !z) return esc(s);
+  if (ZH.mode === 'zh') return esc(z);
+  return `${esc(s)}<span class="zh-line">${esc(z)}</span>`;
+}
+
+const biList = (arr, zarr) => (arr || []).map((v, i) => bi(v, (zarr || [])[i]));
 
 function renderArticle(c) {
   const sections = (c.body?.sections || []).map(s =>
@@ -303,22 +389,130 @@ function linkifyEv(html, evs) {
   });
 }
 
-function renderBrief(b) {
+function renderBrief(c) {
+  const b = c.brief;
   if (!b) return '<div class="panel">无简报</div>';
-  return `<div class="panel"><h3>AngleEditor 选题简报（AI 的"主编判断"）</h3><dl class="brief-grid">
-    <dt>选题</dt><dd>${esc(b.topic)}</dd><dt>角度</dt><dd>${esc(b.angle)}</dd>
-    <dt>钩子</dt><dd>${esc(b.hook)}</dd><dt>受众</dt><dd>${esc(b.audience)}</dd>
-    <dt>风格</dt><dd>${esc(b.style)}</dd><dt>why now</dt><dd>${esc(b.why_now)}</dd>
-    <dt>避免事项</dt><dd>${(b.avoid || []).map(a => `<span class="tag red">${esc(a)}</span>`).join('')}</dd>
-    <dt>形态计划</dt><dd>${(b.format_plan || []).map(f => `<span class="tag">${f}</span>`).join('')}</dd>
-  </dl></div>`;
+  const z = (ZH.data && ZH.data.brief) || {};
+  const avoid = biList(b.avoid, z.avoid);
+  const kw = biList(b.keywords, z.keywords);
+  return `<div class="panel"><h3>AngleEditor 选题简报（AI 的"主编判断"）</h3>
+    ${zhBar(c)}
+    <dl class="brief-grid">
+      <dt>选题</dt><dd>${bi(b.topic, z.topic)}</dd>
+      <dt>角度</dt><dd>${bi(b.angle, z.angle)}</dd>
+      <dt>钩子</dt><dd>${bi(b.hook, z.hook)}</dd>
+      <dt>受众</dt><dd>${bi(b.audience, z.audience)}</dd>
+      <dt>风格</dt><dd><span class="tag gray">${esc(b.style)}</span></dd>
+      <dt>why now</dt><dd>${bi(b.why_now, z.why_now)}</dd>
+      <dt>避免事项</dt><dd>${avoid.length ? avoid.map(a => `<span class="tag red block">${a}</span>`).join('') : '—'}</dd>
+      <dt>检索关键词</dt><dd>${kw.length ? kw.map(k => `<span class="tag gray block">${k}</span>`).join('') : '—'}</dd>
+      <dt>形态计划</dt><dd>${(b.format_plan || []).map(f => `<span class="tag">${esc(FMT_META[f]?.label || f)}</span>`).join('') || '—'}</dd>
+    </dl></div>`;
 }
 
-function renderFormats(fmts) {
-  if (!fmts || !Object.keys(fmts).length) return '<div class="panel">无派生形态</div>';
-  const labels = { video_script: '短视频脚本', card: '摘要卡片', brief_news: '快讯', comment: '评论引导' };
-  return `<div class="panel">${Object.entries(fmts).map(([k, v]) =>
-    `<div class="fmt-block"><h5>${labels[k] || k}</h5><pre>${esc(JSON.stringify(v, null, 2))}</pre></div>`).join('')}</div>`;
+/* ---------- 多形态：结构化渲染（不再直接抛 JSON） ---------- */
+const FMT_META = {
+  article: { label: '母稿', icon: '📄' },
+  video_script: { label: '短视频脚本', icon: '🎬', desc: '45–60 秒竖屏' },
+  card: { label: '资讯摘要卡片', icon: '🗂', desc: '3–5 条要点' },
+  brief_news: { label: '快讯', icon: '⚡', desc: '≤120 字' },
+  comment: { label: '评论区引导', icon: '💬', desc: '提问 + 讨论角度' },
+};
+
+function renderFormats(c) {
+  const fmts = c.formats || {};
+  if (!Object.keys(fmts).length) return '<div class="panel">无派生形态</div>';
+  const zf = (ZH.data && ZH.data.formats) || {};
+  const blocks = Object.entries(fmts).map(([k, v]) => {
+    const m = FMT_META[k] || { label: k, icon: '📦' };
+    return `<div class="fmt-block">
+      <h5>${m.icon} ${esc(m.label)}${m.desc ? `<span class="fmt-desc">${esc(m.desc)}</span>` : ''}</h5>
+      ${fmtBody(k, v, zf[k] || {})}
+    </div>`;
+  }).join('');
+  return `<div class="panel"><h3>FormatAdapter 一稿多发（${Object.keys(fmts).length} 种形态）</h3>
+    ${zhBar(c)}${blocks}</div>`;
+}
+
+function fmtBody(kind, v, z) {
+  if (v == null) return '<p class="muted">空</p>';
+  if (kind === 'video_script') return fmtVideo(v, z);
+  if (kind === 'card') return fmtCard(v, z);
+  if (kind === 'brief_news') return fmtNews(v, z);
+  if (kind === 'comment') return fmtComment(v, z);
+  return kvTree(v, z);
+}
+
+function fmtVideo(v, z) {
+  const scenes = v.scenes || [];
+  const zs = z.scenes || [];
+  const tbl = scenes.length ? `<table class="scenes">
+    <tr><th style="width:36px">#</th><th style="width:26%">画面</th><th>口播</th><th style="width:22%">字幕</th></tr>
+    ${scenes.map((s, i) => {
+      const q = zs[i] || {};
+      return `<tr><td class="sc-n">${i + 1}</td><td class="sc-shot">${bi(s.shot, q.shot)}</td>
+        <td>${bi(s.voiceover, q.voiceover)}</td><td class="sc-sub">${bi(s.subtitle, q.subtitle)}</td></tr>`;
+    }).join('')}</table>` : '';
+  const tags = (v.hashtags || []).map((h, i) =>
+    `<span class="tag">${bi(String(h).replace(/^#/, '#'), (z.hashtags || [])[i])}</span>`).join('');
+  return `${v.hook ? `<div class="fmt-hook"><span class="fmt-k">钩子</span>${bi(v.hook, z.hook)}</div>` : ''}
+    ${tbl}
+    ${v.cta ? `<div class="fmt-row"><span class="fmt-k">CTA</span><span>${bi(v.cta, z.cta)}</span></div>` : ''}
+    ${tags ? `<div class="fmt-row"><span class="fmt-k">话题标签</span><span>${tags}</span></div>` : ''}`;
+}
+
+function fmtCard(v, z) {
+  const pts = (v.points || []).map((p, i) => `<li>${bi(p, (z.points || [])[i])}</li>`).join('');
+  return `${v.title ? `<div class="fmt-title">${bi(v.title, z.title)}</div>` : ''}
+    ${pts ? `<ol class="fmt-points">${pts}</ol>` : ''}
+    ${v.key_data ? `<div class="fmt-stat"><span class="fmt-k">关键数据</span><b>${bi(v.key_data, z.key_data)}</b></div>` : ''}`;
+}
+
+function fmtNews(v, z) {
+  return `${v.headline ? `<div class="fmt-title">${bi(v.headline, z.headline)}</div>` : ''}
+    ${v.body ? `<p class="fmt-p">${bi(v.body, z.body)}</p>` : ''}`;
+}
+
+function fmtComment(v, z) {
+  const angs = (v.angles || []).map((a, i) => `<li>${bi(a, (z.angles || [])[i])}</li>`).join('');
+  return `${v.question ? `<div class="fmt-quote">${bi(v.question, z.question)}</div>` : ''}
+    ${angs ? `<div class="fmt-row"><span class="fmt-k">讨论角度</span></div><ol class="fmt-points">${angs}</ol>` : ''}`;
+}
+
+/* 通用键值渲染：兜底未知结构，仍然保持可读，不退化成 JSON */
+const KV_LABELS = {
+  title: '标题', headline: '标题', body: '正文', text: '正文', summary: '摘要',
+  hook: '钩子', cta: 'CTA', question: '提问', angles: '讨论角度', points: '要点',
+  key_data: '关键数据', hashtags: '话题标签', scenes: '分镜', shot: '画面',
+  voiceover: '口播', subtitle: '字幕', avg: '均分', verdict: '裁决',
+  scores: '各维度评分', rubric: '评分标准', fact_check: '事实核查',
+  supported: '有据支持', weak: '弱支持', unverified: '未证实', notes: '说明',
+};
+const kvLabel = (k) => KV_LABELS[k] || k;
+
+function kvTree(v, z, depth = 0) {
+  if (v == null || v === '') return '<span class="muted">—</span>';
+  if (typeof v === 'boolean') return v ? '是' : '否';
+  if (typeof v === 'number') return `<b>${v}</b>`;
+  if (typeof v === 'string') return bi(v, typeof z === 'string' ? z : '');
+  if (Array.isArray(v)) {
+    if (!v.length) return '<span class="muted">—</span>';
+    const za = Array.isArray(z) ? z : [];
+    if (v.every(x => typeof x !== 'object' || x === null)) {
+      return `<ol class="fmt-points">${v.map((x, i) => `<li>${kvTree(x, za[i], depth + 1)}</li>`).join('')}</ol>`;
+    }
+    return v.map((x, i) => `<div class="kv-card">${kvTree(x, za[i], depth + 1)}</div>`).join('');
+  }
+  const zo = (z && typeof z === 'object') ? z : {};
+  return `<dl class="kv-grid${depth ? ' sub' : ''}">${Object.entries(v).map(([k, val]) =>
+    `<dt>${esc(kvLabel(k))}</dt><dd>${kvTree(val, zo[k], depth + 1)}</dd>`).join('')}</dl>`;
+}
+
+function renderQuality(q) {
+  if (!q || !Object.keys(q).length) return '<div class="panel">无质量数据</div>';
+  const avg = typeof q.avg === 'number' ? q.avg.toFixed(1) : '-';
+  return `<div class="panel"><h3>质量裁决 · 均分 ${avg}/5 ${q.verdict ? `<span class="tag">${esc(q.verdict)}</span>` : ''}</h3>
+    ${kvTree(q, null)}</div>`;
 }
 
 function renderDist(d) {
