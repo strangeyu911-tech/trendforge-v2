@@ -31,14 +31,30 @@ def _align(orig, zh):
     return ""  # 数字/布尔无需翻译
 
 
+# 分发计划里平台/形态是系统枚举（靠前端标签映射，不回译）；受众/时段/理由是自由文本才回译
+DIST_TEXT_FIELDS = ("audience", "timing", "reason")
+# 质量里要回译的自由文本字段；verdict 是枚举（前端标签映射），scores/fact_check 是数字无需回译
+QUALITY_TEXT_FIELDS = ("comments", "revision_advice", "compliance_hits")
+
+
 def build_source(content: Content) -> dict:
     """抽取需要回译的部分（不含母稿正文——正文有独立的原文阅读场景，回译成本高收益低）"""
     brief = content.brief or {}
+    dist = content.distribution or {}
+    plan = dist.get("plan") or []
+    dist_src = {"plan": [
+        {k: p.get(k) for k in DIST_TEXT_FIELDS if p.get(k)}
+        for p in plan
+    ]} if plan else {}
+    quality = content.quality or {}
+    q_src = {k: quality[k] for k in QUALITY_TEXT_FIELDS if quality.get(k)}
     return {
         "title": content.title or "",
         "summary": content.summary or "",
         "brief": {k: brief[k] for k in BRIEF_FIELDS if brief.get(k)},
         "formats": content.formats or {},
+        "distribution": dist_src,
+        "quality": q_src,
     }
 
 
@@ -70,6 +86,10 @@ def _split(src: dict) -> list[tuple[str, dict]]:
     for name, body in (src.get("formats") or {}).items():
         if body:
             parts.append((f"formats.{name}", {"formats": {name: body}}))
+    if src.get("distribution"):
+        parts.append(("distribution", {"distribution": src["distribution"]}))
+    if src.get("quality"):
+        parts.append(("quality", {"quality": src["quality"]}))
     return parts
 
 
@@ -121,7 +141,8 @@ async def ensure_zh_mirror(session, content: Content, *, refresh: bool = False) 
                 "reason": "该内容目标市场即中文，无需回译", "translation": {}}
 
     cached = content.translation or {}
-    if cached.get("brief") and not refresh:
+    # 旧缓存可能只含 brief/formats，缺分发计划/质量对照；要求齐全才命中缓存
+    if cached.get("brief") and cached.get("distribution") is not None and cached.get("quality") is not None and not refresh:
         return {"available": True, "cached": True, "translation": cached}
 
     if not get_llm().available:

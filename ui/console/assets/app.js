@@ -258,7 +258,7 @@ function contentsTable(list) {
         ${x.is_fallback ? '<span class="tag orange">兜底</span>' : ''}</td>
       <td><span class="tag">${x.market}</span></td>
       <td>${x.quality_avg ? x.quality_avg.toFixed(1) : '-'}</td>
-      <td>${x.formats.map(f => `<span class="tag gray">${f}</span>`).join('')}</td>
+      <td>${x.formats.map(f => `<span class="tag gray">${esc(FMT_META[f]?.label || f)}</span>`).join('')}</td>
       <td>${fmtTime(x.created_at)}</td></tr>`).join('') || '<tr><td colspan="5">暂无内容，先去「跑供给」</td></tr>'}
   </table>`;
 }
@@ -266,7 +266,7 @@ function contentsTable(list) {
 /* ---------- 内容详情 ---------- */
 /* 中文对照状态：非中文市场的产出需要给中文运营一份回译对照，按需生成 + 缓存 */
 const ZH = {
-  mode: localStorage.getItem('tf_zh_mode') || 'both',  // both 双语 | src 原文 | zh 中文
+  mode: localStorage.getItem('tf_zh_mode') || 'zh',  // zh 仅中文(默认) | both 双语 | src 原文
   status: 'none',   // none 未生成 | loading | ready | unavailable
   reason: '', data: null, content: null, tab: 'article',
 };
@@ -284,7 +284,7 @@ async function contentDetail(id) {
     root.innerHTML = `
       <h1 class="page-title">${esc(c.title)}</h1>
       <p class="page-sub"><span class="tag">${c.market}</span> <span class="tag gray">${c.language}</span>
-        质量 ${c.quality_avg?.toFixed(1) || '-'}/5 · 裁决 ${esc(c.verdict)}
+        质量 ${c.quality_avg?.toFixed(1) || '-'}/5 · 裁决 ${esc(VERDICT_LABEL[c.verdict] || c.verdict || '-')}
         ${c.is_fallback ? '<span class="tag orange">含兜底环节</span>' : ''}</p>
       <div class="tabs">
         <a data-tab="article" class="active">母稿</a><a data-tab="brief">选题简报</a>
@@ -299,6 +299,7 @@ async function contentDetail(id) {
       paintTab();
     });
     paintTab();
+    if (ZH.content?.needs_zh) ensureZh();  // 非中文市场：按需生成中文对照（含分发计划+质量）
   } catch (e) { root.innerHTML = errBox(e); }
 }
 
@@ -319,7 +320,7 @@ function paintTab() {
     body.innerHTML = h;
     bindZhBar();
   });
-  if (['brief', 'formats'].includes(ZH.tab)) ensureZh();
+  if (ZH.content?.needs_zh) ensureZh();
 }
 
 /* 缺中文对照时按需触发生成（一次调用同时覆盖简报+多形态） */
@@ -441,6 +442,17 @@ const FMT_META = {
   comment: { label: '评论区引导', icon: '💬', desc: '提问 + 讨论角度' },
 };
 
+/* 平台枚举 → 中文运营标签：专有名词（X/LinkedIn/YouTube 等）保留英文，复合标识符翻译后缀 */
+const PLATFORM_LABEL = {
+  x: 'X', linkedin: 'LinkedIn', youtube_shorts: 'YouTube短视频', youtube: 'YouTube',
+  line: 'LINE', yahoo_news: '雅虎新闻', naver: 'Naver',
+  instagram: 'Instagram', whatsapp: 'WhatsApp', kwai: '快手',
+  wechat: '微信公众号', weibo: '微博', douyin: '抖音',
+};
+
+/* 质量裁决枚举 → 中文 */
+const VERDICT_LABEL = { publish: '可发布', revise: '需修改', reject: '不通过' };
+
 function renderFormats(c) {
   const fmts = c.formats || {};
   if (!Object.keys(fmts).length) return '<div class="panel">无派生形态</div>';
@@ -502,6 +514,10 @@ function fmtComment(v, z) {
 }
 
 /* 通用键值渲染：兜底未知结构，仍然保持可读，不退化成 JSON */
+/* 枚举型取值 → 中文标签（与 key 标签区分，作用于值本身） */
+const VAL_LABELS = {
+  verdict: VERDICT_LABEL,
+};
 const KV_LABELS = {
   title: '标题', headline: '标题', body: '正文', text: '正文', summary: '摘要',
   hook: '钩子', cta: 'CTA', question: '提问', angles: '讨论角度', points: '要点',
@@ -509,41 +525,61 @@ const KV_LABELS = {
   voiceover: '口播', subtitle: '字幕', avg: '均分', verdict: '裁决',
   scores: '各维度评分', rubric: '评分标准', fact_check: '事实核查',
   supported: '有据支持', weak: '弱支持', unverified: '未证实', notes: '说明',
+  // 质量各维度评分
+  accuracy: '准确性', angle: '角度质量', readability: '可读性',
+  local_fit: '本地契合度', engagement: '互动性', depth: '深度',
+  credibility: '可信度', originality: '原创性', compliance: '合规性',
+  freshness: '时效性', structure: '结构', tone: '语气', factuality: '事实性',
+  // 事实核查
+  claim_count: '声明数', support_ratio: '支持率', weak_claims: '弱支持声明',
+  unsupported_claims: '未证实声明', confidence: '置信度',
+  // 合规 / 修订
+  compliance_hits: '合规命中', revision_advice: '修改建议', comments: '评语',
 };
 const kvLabel = (k) => KV_LABELS[k] || k;
 
-function kvTree(v, z, depth = 0) {
+function kvTree(v, z, depth = 0, key) {
   if (v == null || v === '') return '<span class="muted">—</span>';
   if (typeof v === 'boolean') return v ? '是' : '否';
   if (typeof v === 'number') return `<b>${v}</b>`;
-  if (typeof v === 'string') return bi(v, typeof z === 'string' ? z : '');
+  if (typeof v === 'string') {
+    if (key && VAL_LABELS[key] && VAL_LABELS[key][v] != null) return esc(VAL_LABELS[key][v]);
+    return bi(v, typeof z === 'string' ? z : '');
+  }
   if (Array.isArray(v)) {
     if (!v.length) return '<span class="muted">—</span>';
     const za = Array.isArray(z) ? z : [];
     if (v.every(x => typeof x !== 'object' || x === null)) {
-      return `<ol class="fmt-points">${v.map((x, i) => `<li>${kvTree(x, za[i], depth + 1)}</li>`).join('')}</ol>`;
+      return `<ol class="fmt-points">${v.map((x, i) => `<li>${kvTree(x, za[i], depth + 1, key)}</li>`).join('')}</ol>`;
     }
-    return v.map((x, i) => `<div class="kv-card">${kvTree(x, za[i], depth + 1)}</div>`).join('');
+    return v.map((x, i) => `<div class="kv-card">${kvTree(x, za[i], depth + 1, key)}</div>`).join('');
   }
   const zo = (z && typeof z === 'object') ? z : {};
   return `<dl class="kv-grid${depth ? ' sub' : ''}">${Object.entries(v).map(([k, val]) =>
-    `<dt>${esc(kvLabel(k))}</dt><dd>${kvTree(val, zo[k], depth + 1)}</dd>`).join('')}</dl>`;
+    `<dt>${esc(kvLabel(k))}</dt><dd>${kvTree(val, zo[k], depth + 1, k)}</dd>`).join('')}</dl>`;
 }
 
 function renderQuality(q) {
   if (!q || !Object.keys(q).length) return '<div class="panel">无质量数据</div>';
   const avg = typeof q.avg === 'number' ? q.avg.toFixed(1) : '-';
-  return `<div class="panel"><h3>质量裁决 · 均分 ${avg}/5 ${q.verdict ? `<span class="tag">${esc(q.verdict)}</span>` : ''}</h3>
-    ${kvTree(q, null)}</div>`;
+  const zq = (ZH.data && ZH.data.quality) || {};
+  return `<div class="panel"><h3>质量裁决 · 均分 ${avg}/5 ${q.verdict ? `<span class="tag">${esc(VERDICT_LABEL[q.verdict] || q.verdict)}</span>` : ''}</h3>
+    ${kvTree(q, zq)}</div>`;
 }
 
 function renderDist(d) {
   const plan = d?.plan || [];
   if (!plan.length) return '<div class="panel">无分发计划</div>';
+  const zd = (ZH.data && ZH.data.distribution) || {};
+  const zplan = zd.plan || [];
   return `<div class="panel"><h3>Distributor 分发计划</h3><table>
     <tr><th>#</th><th>平台</th><th>形态</th><th>受众</th><th>时段</th><th>理由</th></tr>
-    ${plan.map(p => `<tr><td>${p.priority}</td><td>${esc(p.platform)}</td><td><span class="tag">${esc(p.format)}</span></td>
-      <td>${esc(p.audience)}</td><td>${esc(p.timing)}</td><td>${esc(p.reason)}</td></tr>`).join('')}
+    ${plan.map((p, i) => `<tr><td>${p.priority}</td>
+      <td>${esc(PLATFORM_LABEL[p.platform] || p.platform)}</td>
+      <td><span class="tag">${esc(FMT_META[p.format]?.label || p.format)}</span></td>
+      <td>${bi(p.audience, zplan[i] && zplan[i].audience)}</td>
+      <td>${bi(p.timing, zplan[i] && zplan[i].timing)}</td>
+      <td>${bi(p.reason, zplan[i] && zplan[i].reason)}</td></tr>`).join('')}
   </table></div>`;
 }
 
