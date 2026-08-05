@@ -6,9 +6,16 @@ body { font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans
 .logo { padding:0 20px 18px; font-size:18px; font-weight:700; color:#fff; }
 .logo span { color:#6ee7d8; }
 #sidebar nav { display:flex; flex-direction:column; }
-#sidebar nav a { padding:11px 20px; color:#9aa5bd; text-decoration:none; font-size:14px; }
+#sidebar nav a { padding:11px 20px; color:#9aa5bd; text-decoration:none; font-size:14px;
+                 display:flex; align-items:center; justify-content:space-between; gap:8px; }
 #sidebar nav a.active { background:#1f2a4a; color:#fff; border-right:3px solid #6ee7d8; }
 #sidebar nav a:hover { color:#fff; }
+.nav-badge { font-size:10px; font-weight:700; padding:1.5px 7px; border-radius:99px;
+             background:#6ee7d8; color:#0f1729; letter-spacing:.3px; flex-shrink:0; }
+.nav-badge.running { animation:tf-pulse 1.5s ease-in-out infinite; }
+.nav-badge.done { background:#3ddc97; }
+.nav-badge.failed { background:#ff9c9c; }
+@keyframes tf-pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }
 .sys-status { margin-top:auto; padding:14px 20px; font-size:12px; color:#6ee7d8; }
 .sys-status.err { color:#ff9c9c; }
 #main { flex:1; padding:28px 32px; max-width:1200px; }
@@ -39,7 +46,12 @@ select, input { padding:9px 12px; border:1px solid #d5dbea; border-radius:9px; f
 .toolbar { display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
 .job-box { background:#f0f4ff; border:1px solid #d3ddfb; border-radius:10px; padding:14px 18px;
            font-size:13.5px; margin-top:16px; display:none; }
-.job-box.show { display:block; }
+.job-box.show { display:block; position:relative; padding-right:38px; }
+.job-elapsed { display:inline-block; margin-left:10px; font-size:11.5px; color:#77809a;
+               background:#fff; border:1px solid #d3ddfb; border-radius:99px; padding:1px 9px; }
+.job-close { position:absolute; top:10px; right:12px; border:none; background:transparent;
+             color:#9aa5bd; font-size:13px; cursor:pointer; line-height:1; padding:2px 4px; }
+.job-close:hover { color:#2f4bd7; }
 .tabs { display:flex; gap:4px; border-bottom:1px solid #e3e8f2; margin-bottom:18px; flex-wrap:wrap; }
 .tabs a { padding:9px 16px; font-size:13.5px; color:#77809a; text-decoration:none; cursor:pointer; }
 .tabs a.active { color:#2f4bd7; border-bottom:2px solid #2f4bd7; font-weight:600; }
