@@ -14,6 +14,132 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 
+/* ---------- 全局供给任务状态 ----------
+   关键：轮询与状态存活于视图之外（模块级 + localStorage），
+   切换页面/刷新浏览器都不会中断正在运行的供给任务。 */
+const RUN_KEY = 'tf_active_run';
+const RESULT_TTL = 30 * 60 * 1000; // 已完成结果保留 30 分钟
+
+const RunState = {
+  job: null,      // {job_id, market, status, progress, content_id, error, started_at, updated_at}
+  timer: null,
+  miss: 0,
+
+  init() {
+    try { this.job = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) { this.job = null; }
+    // 陈旧的已完成结果不再恢复
+    if (this.job && this.job.status !== 'running' && this.job.status !== 'starting'
+        && Date.now() - (this.job.updated_at || 0) > RESULT_TTL) {
+      this.job = null;
+      try { localStorage.removeItem(RUN_KEY); } catch (e) { }
+    }
+    if (this.job && (this.job.status === 'running' || this.job.status === 'starting')) this.startPolling();
+    this.paint();
+  },
+
+  set(patch) {
+    this.job = Object.assign({}, this.job, patch, { updated_at: Date.now() });
+    try { localStorage.setItem(RUN_KEY, JSON.stringify(this.job)); } catch (e) { }
+    this.paint();
+  },
+
+  clear() {
+    this.stopPolling();
+    this.job = null;
+    try { localStorage.removeItem(RUN_KEY); } catch (e) { }
+    this.paint();
+  },
+
+  startPolling() {
+    if (this.timer) return;               // 全局唯一，杜绝重复 timer 泄漏
+    this.miss = 0;
+    this.timer = setInterval(() => this.tick(), 5000);
+  },
+
+  stopPolling() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  },
+
+  async tick() {
+    if (!this.job || !this.job.job_id) { this.stopPolling(); return; }
+    let j;
+    try { j = await API.job(this.job.job_id); }
+    catch (e) { this.paint(); return; }   // 网络抖动/冷启动：保持轮询，下次再试
+    if (j.status === 'done') {
+      this.stopPolling();
+      this.set({ status: 'done', progress: '', content_id: (j.result || {}).content_id });
+      if (currentView() === 'pipeline') loadTasks();
+    } else if (j.status === 'failed') {
+      this.stopPolling();
+      this.set({ status: 'failed', error: j.error || '未知错误' });
+      if (currentView() === 'pipeline') loadTasks();
+    } else if (j.status === 'unknown') {
+      // 后端重启会丢失内存中的 JOBS 表，容忍 3 次后判定失联
+      if (++this.miss >= 3) { this.stopPolling(); this.set({ status: 'lost' }); }
+      else this.paint();
+    } else {
+      this.miss = 0;
+      this.set({ status: 'running', progress: j.progress || this.job.progress || '' });
+    }
+  },
+
+  paint() { this.paintBox(); this.paintBadge(); },
+
+  paintBox() {
+    const box = document.getElementById('job-box');
+    const busy = !!this.job && (this.job.status === 'running' || this.job.status === 'starting');
+    [document.getElementById('run-btn'), document.getElementById('force-btn')].forEach(b => {
+      if (b) b.disabled = busy;
+    });
+    if (!box) return;                     // 当前不在「跑供给」视图，只更新侧边栏徽标
+    const j = this.job;
+    if (!j) { box.className = 'job-box'; box.innerHTML = ''; return; }
+    box.className = 'job-box show';
+    const close = '<button class="job-close" title="清除">✕</button>';
+    if (j.status === 'starting') {
+      box.innerHTML = '发起中…';
+    } else if (j.status === 'running') {
+      box.innerHTML = `⏳ 流水线运行中 · <b>${esc(j.market || '')}</b>${j.job_id ? ` · job ${esc(j.job_id.slice(0, 8))}` : ''}
+        ${j.progress ? ` · 当前 Agent：<b>${esc(j.progress)}</b>` : ' · 10 个 Agent 依次执行，约 2-5 分钟'}
+        <span class="job-elapsed">已运行 ${fmtElapsed(j.started_at)}</span>
+        <br><small style="color:#77809a">任务在服务端运行，切换页面或刷新浏览器都不会中断，可随时回来查看进度。</small>`;
+    } else if (j.status === 'cached') {
+      box.innerHTML = `${close}✅ 命中缓存（秒开，零额度消耗）→ <a class="link" href="#content/${esc(j.content_id)}">查看内容</a>`;
+    } else if (j.status === 'done') {
+      box.innerHTML = `${close}✅ 供给完成（耗时 ${fmtElapsed(j.started_at, j.updated_at)}）→ <a class="link" href="#content/${esc(j.content_id)}">查看内容与 Trace</a>`;
+    } else if (j.status === 'failed') {
+      box.innerHTML = `${close}❌ 失败：${esc(j.error)}`;
+    } else if (j.status === 'error') {
+      box.innerHTML = `${close}❌ 发起失败：${esc(j.error)}`;
+    } else if (j.status === 'lost') {
+      box.innerHTML = `${close}⚠️ 运行状态失联（后端可能已重启或休眠），任务结果请查看下方「运行历史」。`;
+    }
+    const btn = box.querySelector('.job-close');
+    if (btn) btn.onclick = () => this.clear();
+  },
+
+  paintBadge() {
+    const link = document.querySelector('#sidebar nav a[data-view="pipeline"]');
+    if (!link) return;
+    let b = link.querySelector('.nav-badge');
+    const j = this.job;
+    const map = { running: ['运行中', 'running'], starting: ['运行中', 'running'], done: ['完成', 'done'], cached: ['完成', 'done'], failed: ['失败', 'failed'], error: ['失败', 'failed'], lost: ['失联', 'failed'] };
+    const hit = j && map[j.status];
+    if (!hit) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'nav-badge'; link.appendChild(b); }
+    b.textContent = hit[0];
+    b.className = `nav-badge ${hit[1]}`;
+  },
+};
+
+function currentView() { return (location.hash.slice(1) || 'overview').split('/')[0]; }
+
+function fmtElapsed(from, to) {
+  if (!from) return '—';
+  const s = Math.max(0, Math.floor(((to || Date.now()) - from) / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
+}
+
 /* ---------- 仪表盘 ---------- */
 async function overview() {
   root.innerHTML = '<div class="loading">加载中…</div>';
@@ -55,37 +181,31 @@ async function pipeline() {
   loadTasks();
   document.getElementById('run-btn').onclick = () => startRun(false);
   document.getElementById('force-btn').onclick = () => startRun(true);
+  // 视图重建后恢复正在运行/已完成的任务展示（切页面回来不会“看起来停了”）
+  const active = RunState.job;
+  if (active && active.market) {
+    const sel = document.getElementById('mk');
+    if (sel && [...sel.options].some(o => o.value === active.market)) sel.value = active.market;
+  }
+  RunState.paint();
 }
 
 async function startRun(force) {
+  if (RunState.job && (RunState.job.status === 'running' || RunState.job.status === 'starting')) return;
   const market = document.getElementById('mk').value;
-  const box = document.getElementById('job-box');
-  box.className = 'job-box show';
-  box.innerHTML = '发起中…';
+  RunState.clear();
+  RunState.set({ status: 'starting', market, started_at: Date.now() });
   try {
     const r = await API.runPipeline(market, force);
     if (r.cached) {
-      box.innerHTML = `✅ 命中缓存（秒开，零额度消耗）→ <a class="link" href="#content/${r.content_id}">查看内容</a>`;
+      RunState.set({ status: 'cached', job_id: null, content_id: r.content_id });
       return;
     }
-    box.innerHTML = `⏳ 流水线运行中（job ${r.job_id.slice(0, 8)}…），10 个 Agent 依次执行，约 2-5 分钟…`;
-    const timer = setInterval(async () => {
-      try {
-        const j = await API.job(r.job_id);
-        if (j.status === 'done') {
-          clearInterval(timer);
-          box.innerHTML = `✅ 供给完成 → <a class="link" href="#content/${j.result.content_id}">查看内容与 Trace</a>`;
-          loadTasks();
-        } else if (j.status === 'failed') {
-          clearInterval(timer);
-          box.innerHTML = `❌ 失败：${esc(j.error)}`;
-          loadTasks();
-        } else if (j.progress) {
-          box.innerHTML = `⏳ 流水线运行中… 当前 Agent：<b>${esc(j.progress)}</b>`;
-        }
-      } catch (e) { /* 轮询失败继续 */ }
-    }, 5000);
-  } catch (e) { box.innerHTML = `❌ ${esc(e.message)}`; }
+    RunState.set({ status: 'running', job_id: r.job_id, progress: '', started_at: Date.now() });
+    RunState.startPolling();
+  } catch (e) {
+    RunState.set({ status: 'error', error: e.message });
+  }
 }
 
 async function loadTasks() {
@@ -382,6 +502,8 @@ function errBox(e) { return `<div class="panel" style="color:#d43d3d">加载失�
 
 /* ---------- 启动 ---------- */
 (async () => {
+  RunState.init();   // 先恢复未完成的供给任务（刷新浏览器也能续上轮询）
+  route();
   try {
     const h = await API.health();
     document.getElementById('sys-status').textContent = `● ${h.llm.model}${h.llm.configured ? '' : '（未配置）'}`;
@@ -390,5 +512,4 @@ function errBox(e) { return `<div class="panel" style="color:#d43d3d">加载失�
     el.textContent = '○ 后端连接失败';
     el.classList.add('err');
   }
-  route();
 })();
