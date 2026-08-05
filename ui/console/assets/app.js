@@ -343,16 +343,30 @@ async function ensureZh() {
   paintTab();
 }
 
-/* 按总编修改意见就地重写：调用修订端点，成功后重载详情并刷新中文对照 */
+/* 按总编修改意见就地重写：提交后台任务并轮询，完成后重载详情并刷新中文对照 */
 async function doRevise(id, btn) {
   if (btn.disabled) return;
   btn.disabled = true;
   const old = btn.textContent;
   btn.textContent = '重写中…';
   try {
-    const updated = await API.contentRevise(id);
-    await contentDetail(id);  // 重载详情，拉取最新内容
-    if (updated.needs_zh) { ZH.status = 'none'; ZH.data = null; ensureZh(); }
+    const r = await API.contentRevise(id);
+    const jobId = r.job_id;
+    if (!jobId) throw new Error('未获取到任务编号');
+    // 轮询任务状态（慢速 LLM，最多约 3 分钟）
+    let job;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(res => setTimeout(res, 3000));
+      job = await API.contentReviseJob(jobId);
+      if (job.status === 'done' || job.status === 'failed') break;
+    }
+    if (job && job.status === 'done') {
+      const fresh = await API.content(id);
+      await contentDetail(id);  // 重载详情，拉取最新内容
+      if (fresh.needs_zh) { ZH.status = 'none'; ZH.data = null; ensureZh(); }
+    } else {
+      throw new Error((job && job.error) || '修订超时，请稍后重试');
+    }
   } catch (e) {
     alert(`修订失败：${e.message}`);
     btn.disabled = false;
