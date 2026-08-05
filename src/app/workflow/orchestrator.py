@@ -42,36 +42,49 @@ async def run_pipeline(market_code: str) -> dict:
         await session.commit()
 
         ctx = RunContext(task_id=task.id, session=session, llm=get_llm(), task=task, market=market)
-        data: dict = {"_market": market_code}
+        data: dict = {"_market": market_code, "rejected_topics": []}
         try:
-            # ---- SENSE ----
-            data.update(await SignalScoutAgent()._exec(ctx, data))
-            data.update(await TrendAnalystAgent()._exec(ctx, data))
-            data.update(await AudienceInsightAgent()._exec(ctx, data))
-            data.update(await AngleEditorAgent()._exec(ctx, data))
-            # ---- PRODUCE ----
-            data.update(await ResearcherAgent()._exec(ctx, data))
-            if not data.get("evidences"):
-                raise PipelineRejected("无证据支撑，终止供给（拒绝无米之炊）")
-            data.update(await WriterAgent()._exec(ctx, data))
-            data.update(await FactCheckerAgent()._exec(ctx, data))
-            data.update(await EditorAgent()._exec(ctx, data))
-            # Editor 回退循环
-            while data["review"]["verdict"] == "revise" and ctx.review_rounds < settings.max_review_rounds:
-                ctx.review_rounds += 1
-                rewrite_inputs = dict(data)
-                rewrite_inputs["editor_feedback"] = data["review"].get("revision_advice", "")
-                data.update(await WriterAgent()._exec(ctx, rewrite_inputs))
-                data.update(await FactCheckerAgent()._exec(ctx, data))
-                data.update(await EditorAgent()._exec(ctx, data))
-            if data["review"]["verdict"] == "reject":
+            # 主编 reject 自愈：换题重试一次（选题判断是概率事件，重试是系统设计而非碰运气）
+            for attempt in range(2):
+                try:
+                    # ---- SENSE ----
+                    data.update(await SignalScoutAgent()._exec(ctx, data))
+                    data.update(await TrendAnalystAgent()._exec(ctx, data))
+                    data.update(await AudienceInsightAgent()._exec(ctx, data))
+                    data.update(await AngleEditorAgent()._exec(ctx, data))
+                    # ---- PRODUCE ----
+                    data.update(await ResearcherAgent()._exec(ctx, data))
+                    if not data.get("evidences"):
+                        raise PipelineRejected("无证据支撑，终止供给（拒绝无米之炊）")
+                    data.update(await WriterAgent()._exec(ctx, data))
+                    data.update(await FactCheckerAgent()._exec(ctx, data))
+                    data.update(await EditorAgent()._exec(ctx, data))
+                    # Editor 回退循环
+                    while data["review"]["verdict"] == "revise" and ctx.review_rounds < settings.max_review_rounds:
+                        ctx.review_rounds += 1
+                        rewrite_inputs = dict(data)
+                        rewrite_inputs["editor_feedback"] = data["review"].get("revision_advice", "")
+                        data.update(await WriterAgent()._exec(ctx, rewrite_inputs))
+                        data.update(await FactCheckerAgent()._exec(ctx, data))
+                        data.update(await EditorAgent()._exec(ctx, data))
+                    if data["review"]["verdict"] == "reject":
+                        raise PipelineRejected(f"总编 reject：{data['review'].get('comments', '')[:80]}")
+                    break  # pass，跳出重试循环
+                except PipelineRejected:
+                    if attempt == 1:
+                        raise
+                    data["rejected_topics"].append(data.get("brief", {}).get("topic", ""))
+                    ctx.log_decision("orchestrator", "选题/成稿被否决，换题重试一次",
+                                     rejected=data["rejected_topics"])
+            # 被否决的尝试记入 BadCase Center（质量治理资产）
+            if data["rejected_topics"]:
                 session.add(BadCase(
                     content_id="", category="Q",
-                    title=data.get("article", {}).get("title", data["brief"].get("topic", "")),
-                    root_cause=data["review"].get("comments", "总编 reject"),
-                    fix_action=data["review"].get("revision_advice", ""),
+                    title=data["rejected_topics"][0],
+                    root_cause="总编 reject（首次尝试），已自动换题重试",
+                    fix_action="AngleEditor 避开已否决选题，Researcher 启用类目一致性过滤",
+                    status="auto_recovered",
                 ))
-                raise PipelineRejected(f"总编 reject：{data['review'].get('comments', '')[:80]}")
             # ---- AMPLIFY ----
             data.update(await FormatAdapterAgent()._exec(ctx, data))
             data.update(await DistributorAgent()._exec(ctx, data))

@@ -18,9 +18,11 @@ class AngleEditorAgent(BaseAgent):
     async def run(self, ctx: RunContext, inputs: dict) -> dict:
         insights = inputs["insights"]
         m = ctx.market
-        # 已发布标题用于角度去重
+        # 已发布标题 + 已被总编否决的选题（重试时传入）用于角度去重
         existing = (await ctx.session.execute(
             select(Content.title).where(Content.market == m.code).limit(20))).scalars().all()
+        rejected = inputs.get("rejected_topics") or []
+        existing.extend(f"[已否决] {t}" for t in rejected)
         system, user = get_pm().render(
             self.prompt_name,
             market=m.name, market_code=m.code, language=m.language,

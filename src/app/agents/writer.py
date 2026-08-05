@@ -21,7 +21,7 @@ class WriterAgent(BaseAgent):
         style = brief.get("style", m.default_style)
         style_info = CONTENT_STYLES.get(style, CONTENT_STYLES["deep_dive"])
         ev_lines = "\n".join(
-            f"[{e['ev_id']}] ({e['source']}|可信度{e['credibility']}|{e['published_at']}) {e['text'][:300]}"
+            f"[{e['ev_id']}] ({e['source']}|可信度{e['credibility']}|{e['published_at']}) {e['text'][:600]}"
             for e in evidences
         )
         system, user = get_pm().render(
@@ -33,7 +33,7 @@ class WriterAgent(BaseAgent):
             avoid=json.dumps(brief.get("avoid") or [], ensure_ascii=False),
             evidences=ev_lines, editor_feedback=feedback or "（无，初稿）",
         )
-        resp = await ctx.llm.chat(system, user, json_mode=True, max_tokens=6000)
+        resp = await ctx.llm.chat(system, user, json_mode=True, max_tokens=12000)
         data = extract_json(resp.text)
         title = str(data.get("title", "")).strip()
         sections = data.get("sections") or []
