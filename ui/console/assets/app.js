@@ -298,8 +298,9 @@ async function kbView() {
       const q = document.getElementById('kb-q').value.trim();
       if (!q) return;
       const r = await API.kbSearch(q);
-      document.getElementById('kb-results').innerHTML = r.results.map(e =>
-        `<div class="finding">[${e.ev_id}] <b>${esc(e.doc_title)}</b> · ${esc(e.source)} · score ${e.score}<br>
+      document.getElementById('kb-results').innerHTML = r.results.map((e, i) =>
+        `<div class="finding"><span class="rank">#${i + 1}</span> <b>${esc(e.doc_title)}</b>
+           <span class="tag gray">${esc(e.source)}</span>${e.published_at ? ` <span class="tag gray">${esc(String(e.published_at).slice(0, 10))}</span>` : ''}${e.credibility ? ` <span class="tag gray">可信度 ${e.credibility}</span>` : ''} · score ${e.score}<br>
          <span style="color:#77809a">${esc(e.text.slice(0, 140))}…</span></div>`).join('') || '无结果';
     };
   } catch (e) { root.innerHTML = errBox(e); }
