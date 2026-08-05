@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 *.db
+!src/app/data/demo_snapshot.db
 .env
 .DS_Store
 dist/
