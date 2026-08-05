@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendForge V2 运营控制台</title>
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo">TrendForge <span>V2</span></div>
+  <nav>
+    <a href="#overview" data-view="overview">仪表盘</a>
+    <a href="#pipeline" data-view="pipeline">跑供给</a>
+    <a href="#contents" data-view="contents">内容</a>
+    <a href="#markets" data-view="markets">市场档案</a>
+    <a href="#eval" data-view="eval">评估中心</a>
+    <a href="#kb" data-view="kb">知识库</a>
+  </nav>
+  <div id="sys-status" class="sys-status">连接中…</div>
+</aside>
+<main id="main">
+  <div id="view-root"><div class="loading">加载中…</div></div>
+</main>
+<script src="./assets/api.js"></script>
+<script src="./assets/app.js"></script>
+</body>
+</html>

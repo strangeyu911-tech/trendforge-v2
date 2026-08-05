@@ -1,0 +1,21 @@
+services:
+  # 后端：FastAPI Docker 服务
+  - type: web
+    name: trendforge-v2-api
+    runtime: docker
+    dockerfilePath: ./src/Dockerfile
+    dockerContext: ./src
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: TF_LLM_MODEL
+        value: deepseek-v4-flash
+      - key: DEEPSEEK_API_KEY
+        sync: false   # 在 Render 控制台手动配置
+
+  # 前端：静态站（门户 + 控制台）
+  - type: web
+    name: trendforge-v2-web
+    runtime: static
+    staticPublishPath: ./ui
+    plan: free

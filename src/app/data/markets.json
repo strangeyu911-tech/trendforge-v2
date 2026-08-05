@@ -1,0 +1,127 @@
+[
+  {
+    "code": "US",
+    "name": "美国",
+    "language": "en",
+    "timezone": "America/New_York",
+    "media_landscape": {
+      "mainstream": ["Reuters", "AP", "TechCrunch", "The Verge", "Bloomberg"],
+      "social": ["X", "LinkedIn", "Reddit", "YouTube"],
+      "notes": "科技媒体成熟，读者习惯深度分析与数据支撑；Substack 式个人作者影响力大"
+    },
+    "culture_notes": [
+      "偏好直接、数据驱动的表达，反感营销腔",
+      "对 AI 就业冲击话题敏感但接受公开讨论",
+      "避免政治站队与党派 framing",
+      "尊重个人主义叙事：工具赋能个人 > 集体效率"
+    ],
+    "interests": {"ai": 0.9, "tech": 0.8, "business": 0.7, "sports": 0.5, "entertainment": 0.6},
+    "platforms": {
+      "x": {"formats": ["brief_news", "card"], "audience": "科技从业者/投资人", "peak": "工作日 9-11am ET"},
+      "linkedin": {"formats": ["article", "card"], "audience": "职场专业人士", "peak": "周二至周四 8-10am"},
+      "youtube_shorts": {"formats": ["video_script"], "audience": "18-34 岁科技爱好者", "peak": "晚间 7-10pm"}
+    },
+    "tone": "direct, data-driven, slightly informal",
+    "default_style": "deep_dive"
+  },
+  {
+    "code": "JP",
+    "name": "日本",
+    "language": "ja",
+    "timezone": "Asia/Tokyo",
+    "media_landscape": {
+      "mainstream": ["NHK", "日经新闻", "朝日新闻", "ITmedia"],
+      "social": ["X", "LINE", "Yahoo!ニュース"],
+      "notes": "通勤阅读场景强（电车），摘要与卡片形态消费高；Yahoo 新闻评论区文化活跃"
+    },
+    "culture_notes": [
+      "表达需礼貌克制，避免过度断言与 sensational 标题",
+      "对 AI 取代工作的话题焦虑感强，宜采用'协作/赋能'而非'替代'叙事",
+      "重视企业名与数据的准确性，错误会引发强烈负反馈",
+      "职场等级文化敏感，避免直接批评特定企业"
+    ],
+    "interests": {"ai": 0.7, "tech": 0.8, "business": 0.6, "sports": 0.6, "entertainment": 0.9},
+    "platforms": {
+      "line": {"formats": ["card", "brief_news"], "audience": "通勤族", "peak": "早 7-9 / 晚 18-20"},
+      "x": {"formats": ["brief_news", "comment"], "audience": "20-40 岁网民", "peak": "午间 12-13 / 晚 21-23"},
+      "yahoo_news": {"formats": ["article", "comment"], "audience": "大众读者", "peak": "全天"}
+    },
+    "tone": "丁寧で簡潔、データに基づく、控えめ",
+    "default_style": "explainer"
+  },
+  {
+    "code": "KR",
+    "name": "韩国",
+    "language": "ko",
+    "timezone": "Asia/Seoul",
+    "media_landscape": {
+      "mainstream": ["조선일보", "한겨레", "ZDNet Korea", "전자신문"],
+      "social": ["Naver", "KakaoTalk", "Instagram", "YouTube"],
+      "notes": "Naver 生态主导搜索与新闻分发；移动端消费占比极高，短视频增长快"
+    },
+    "culture_notes": [
+      "年轻用户对快节奏、视觉化内容偏好强",
+      "对本土企业（三星/SK/Naver）动态高度关注",
+      "竞争激烈的社会氛围使'效率/竞争力'角度共鸣强",
+      "避免涉及历史与领土争议话题"
+    ],
+    "interests": {"ai": 0.8, "tech": 0.9, "business": 0.6, "sports": 0.5, "entertainment": 0.9},
+    "platforms": {
+      "naver": {"formats": ["article", "card"], "audience": "大众读者", "peak": "全天"},
+      "instagram": {"formats": ["card", "video_script"], "audience": "20-35 岁", "peak": "晚 19-23"},
+      "youtube": {"formats": ["video_script"], "audience": "18-34 岁", "peak": "晚 20-24"}
+    },
+    "tone": "활기차고 간결하며 트렌디함",
+    "default_style": "news_roundup"
+  },
+  {
+    "code": "BR",
+    "name": "巴西",
+    "language": "pt",
+    "timezone": "America/Sao_Paulo",
+    "media_landscape": {
+      "mainstream": ["Globo", "Folha", "Canaltech", "TecMundo"],
+      "social": ["WhatsApp", "Instagram", "X", "Kwai"],
+      "notes": "WhatsApp 是第一大信息分发渠道；足球内容流量碾压级；短视频渗透率极高"
+    },
+    "culture_notes": [
+      "热情、口语化表达效果好，正式腔调反而疏远",
+      "足球是国民话题，跨界内容（科技×足球）表现好",
+      "对物价、就业、中国投资等经济话题敏感且关心",
+      "避免刻板印象与贫富差距 framing"
+    ],
+    "interests": {"ai": 0.5, "tech": 0.6, "business": 0.7, "sports": 1.0, "entertainment": 0.8},
+    "platforms": {
+      "whatsapp": {"formats": ["brief_news", "card"], "audience": "大众用户", "peak": "早 8-10 / 晚 18-21"},
+      "instagram": {"formats": ["video_script", "card"], "audience": "18-35 岁", "peak": "晚 19-23"},
+      "kwai": {"formats": ["video_script"], "audience": "下沉市场用户", "peak": "午间/晚间"}
+    },
+    "tone": "caloroso, informal, direto",
+    "default_style": "news_roundup"
+  },
+  {
+    "code": "CN",
+    "name": "中国",
+    "language": "zh",
+    "timezone": "Asia/Shanghai",
+    "media_landscape": {
+      "mainstream": ["新华社", "财新", "36氪", "虎嗅"],
+      "social": ["微博", "微信公众号", "抖音", "B站", "小红书"],
+      "notes": "超级 App 生态，算法分发主导；深度长文在微信生态有稳定受众；短视频是最大消费形态"
+    },
+    "culture_notes": [
+      "专业、有信息增量的内容受尊重，反感标题党与情绪煽动",
+      "产业叙事（国产替代/出海/硬科技）共鸣强",
+      "数据与信源必须准确，读者考据能力强",
+      "遵守内容合规要求，不涉及敏感政治话题"
+    ],
+    "interests": {"ai": 0.9, "tech": 0.8, "business": 0.8, "sports": 0.5, "entertainment": 0.6},
+    "platforms": {
+      "wechat": {"formats": ["article", "card"], "audience": "专业人士/深度读者", "peak": "早 8-9 / 晚 21-23"},
+      "weibo": {"formats": ["brief_news", "comment"], "audience": "大众网民", "peak": "午间/晚间"},
+      "douyin": {"formats": ["video_script"], "audience": "全年龄段", "peak": "晚 19-23"}
+    },
+    "tone": "专业、克制、有信息增量",
+    "default_style": "deep_dive"
+  }
+]

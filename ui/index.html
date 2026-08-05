@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendForge V2 — AI Native 内容供给引擎</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+         background:#0b1020; color:#e8ecf4; min-height:100vh; }
+  .wrap { max-width:960px; margin:0 auto; padding:64px 24px; }
+  .badge { display:inline-block; padding:4px 12px; border:1px solid #4f6ef7; border-radius:99px;
+           color:#8fa4ff; font-size:13px; margin-bottom:20px; }
+  h1 { font-size:44px; line-height:1.2; margin-bottom:16px;
+       background:linear-gradient(90deg,#8fa4ff,#6ee7d8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:#9aa5bd; font-size:17px; line-height:1.8; max-width:720px; margin-bottom:36px; }
+  .flow { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:40px; }
+  .stage { background:#141b31; border:1px solid #263154; border-radius:12px; padding:14px 18px; flex:1; min-width:180px; }
+  .stage b { display:block; color:#6ee7d8; font-size:13px; letter-spacing:1px; margin-bottom:6px; }
+  .stage span { font-size:13px; color:#b9c2d8; line-height:1.6; }
+  .cta { display:flex; gap:14px; flex-wrap:wrap; }
+  .btn { padding:13px 26px; border-radius:10px; text-decoration:none; font-size:15px; font-weight:600; }
+  .btn-p { background:#4f6ef7; color:#fff; }
+  .btn-g { border:1px solid #3a4770; color:#b9c2d8; }
+  .agents { margin-top:56px; background:#141b31; border:1px solid #263154; border-radius:14px; padding:24px; }
+  .agents h2 { font-size:16px; margin-bottom:14px; color:#8fa4ff; }
+  .agents ol { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px 24px;
+               padding-left:20px; color:#b9c2d8; font-size:13.5px; line-height:1.7; }
+  footer { margin-top:48px; color:#5c6680; font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge">求职作品集 · AI Native 内容智能体 PM</div>
+  <h1>TrendForge V2<br>AI Native 全球化内容供给引擎</h1>
+  <p class="sub">
+    把内容供给的关键流程交给 AI：信号捕捉、趋势研判、需求洞察、角度设计、素材检索、
+    生成、事实核查、总编审核、多形态派生、分发策略——人负责定义标准（市场档案 / Prompt / 评估 Rubric），
+    AI 在真实消费反馈中持续进化。
+  </p>
+  <div class="flow">
+    <div class="stage"><b>SENSE 感知</b><span>信号捕捉 → 趋势研判 → 需求洞察 → 角度设计</span></div>
+    <div class="stage"><b>PRODUCE 生产</b><span>RAG 素材 → 成稿 → 事实核查 → 总编审核</span></div>
+    <div class="stage"><b>AMPLIFY 放大</b><span>多形态派生（短视频/卡片/快讯/评论）→ 分发策略</span></div>
+    <div class="stage"><b>EVALUATE 进化</b><span>消费数据 → 评估报告 → 迭代建议</span></div>
+  </div>
+  <div class="cta">
+    <a class="btn btn-p" href="/console/">进入运营控制台 →</a>
+    <a class="btn btn-g" id="api-link" href="#">API 文档 (Swagger)</a>
+  </div>
+  <div class="agents">
+    <h2>11 个 Agent 的固定拓扑（拓扑固定 · 行为可配）</h2>
+    <ol>
+      <li>SignalScout 信号捕捉</li><li>TrendAnalyst 趋势研判</li>
+      <li>AudienceInsight 需求洞察</li><li>AngleEditor 角度设计</li>
+      <li>Researcher 素材寻找</li><li>Writer 生成</li>
+      <li>FactChecker 事实核查</li><li>Editor 总编审核</li>
+      <li>FormatAdapter 形态派生</li><li>Distributor 分发策略</li>
+      <li>FeedbackAnalyst 反馈分析</li>
+    </ol>
+  </div>
+  <footer>TrendForge V2 · 个人作品集项目 · FastAPI + SQLite + BM25 RAG + DeepSeek</footer>
+</div>
+<script>
+  document.getElementById('api-link').href =
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:8000/docs'
+      : 'https://trendforge-v2-api.onrender.com/docs';
+</script>
+</body>
+</html>
