@@ -7,7 +7,7 @@ from app.agents.base import AgentError, BaseAgent, RunContext
 from app.config import settings
 from app.llm import extract_json
 from app.prompts.manager import get_pm
-from app.rag.store import retrieve
+from app.rag.store import retrieve, retrieve_scores
 
 
 class ResearcherAgent(BaseAgent):
@@ -17,7 +17,7 @@ class ResearcherAgent(BaseAgent):
     async def run(self, ctx: RunContext, inputs: dict) -> dict:
         brief = inputs["brief"]
         queries = await self._rewrite_queries(ctx, brief)
-        evidences = await self._search(ctx, queries)
+        evidences = await self._search(ctx, queries, brief)
         if not evidences:
             raise AgentError(self.name, "检索无证据")
         sources = {e["source"] for e in evidences}
@@ -46,14 +46,26 @@ class ResearcherAgent(BaseAgent):
         kws = brief.get("keywords") or []
         return [brief.get("topic", ""), *kws][:5]
 
-    async def _search(self, ctx: RunContext, queries: list[str]) -> list[dict]:
+    async def _search(self, ctx: RunContext, queries: list[str], brief: dict) -> list[dict]:
         seen: dict[str, dict] = {}
         for q in queries:
             for e in await retrieve(ctx.session, q, top_k=6, days=30):
                 key = e["text"][:80]
                 if key not in seen or e["score"] > seen[key]["score"]:
                     seen[key] = e
-        evs = sorted(seen.values(), key=lambda e: (-e["credibility"], -e["score"]))
+        candidates = list(seen.values())
+        # 主题相关性过滤：用 topic+angle 重新打分，砍掉偏离主题的证据
+        # （防止多主题证据混杂导致 Writer 跑题 —— Editor reject 的前车之鉴）
+        topic_q = f"{brief.get('topic', '')} {brief.get('angle', '')}"
+        scored = await retrieve_scores(ctx, candidates, topic_q)
+        if scored:
+            top = max(s for _, s in scored)
+            relevant = [e for e, s in scored if top <= 0 or s >= top * 0.25]
+            if len(relevant) < 4:  # 过滤太狠则放宽
+                relevant = [e for e, _ in scored]
+        else:
+            relevant = candidates
+        evs = sorted(relevant, key=lambda e: (-e["credibility"], -e["score"]))
         evs = evs[: settings.top_evidences]
         for i, e in enumerate(evs, 1):
             e["ev_id"] = f"ev_{i:03d}"
