@@ -1,6 +1,7 @@
 """内容：列表 / 详情 / Trace / 修订"""
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime
 
@@ -76,12 +77,16 @@ async def content_zh_mirror(content_id: str, refresh: bool = False):
         return await ensure_zh_mirror(session, c, refresh=refresh)
 
 
+# 修订任务：与 pipeline 的运行任务同构——后台执行 + 轮询，避免慢速 LLM 阻塞 HTTP 请求
+REVISE_JOBS: dict[str, dict] = {}
+
+
 @router.post("/contents/{content_id}/revise")
 async def revise_content(content_id: str):
-    """对已裁决为「需修改」的内容，按总编修改意见就地重写。
+    """对已裁决为「需修改」的内容，按总编修改意见就地重写（后台任务 + 轮询）。
 
     复用生成时的 Produce 段子链（Writer→FactChecker→Editor），并刷新多形态派生；
-    中文镜像置空失效，下次查看按需重建。返回更新后的完整内容（与详情同结构）。
+    中文镜像置空失效，下次查看按需重建。立即返回 job_id，前端轮询任务状态。
     """
     async with SessionLocal() as session:
         c = await session.get(Content, content_id)
@@ -106,19 +111,32 @@ async def revise_content(content_id: str):
         c.decision_log = {**(c.decision_log or {}), "_revising_since": datetime.utcnow().isoformat()}
         await session.commit()
 
-        market = await session.get(Market, c.market)
-        if not market:
-            c.status = "published"
+    job_id = str(uuid.uuid4())
+    REVISE_JOBS[job_id] = {"status": "running", "content_id": content_id, "error": None}
+    asyncio.create_task(_revise_work(job_id, content_id))
+    return {"job_id": job_id, "status": "running"}
+
+
+async def _revise_work(job_id: str, content_id: str) -> None:
+    """后台执行修订：复用 Produce 段子链，完成后落库并更新任务状态。"""
+    try:
+        async with SessionLocal() as session:
+            c = await session.get(Content, content_id)
+            if not c:
+                REVISE_JOBS[job_id] = {"status": "failed", "error": "内容不存在"}
+                return
+            market = await session.get(Market, c.market)
+            if not market:
+                c.status = "published"
+                await session.commit()
+                REVISE_JOBS[job_id] = {"status": "failed", "error": "未知市场"}
+                return
+            task = Task(id=str(uuid.uuid4()), kind="revise", market=c.market,
+                        status="running", input={"content_id": content_id})
+            session.add(task)
             await session.commit()
-            raise HTTPException(400, "未知市场，无法修订")
+            ctx = RunContext(task_id=task.id, session=session, llm=get_llm(), task=task, market=market)
 
-        task = Task(id=str(uuid.uuid4()), kind="revise", market=c.market,
-                    status="running", input={"content_id": content_id})
-        session.add(task)
-        await session.commit()
-        ctx = RunContext(task_id=task.id, session=session, llm=get_llm(), task=task, market=market)
-
-        try:
             quality = c.quality or {}
             data = {
                 "brief": c.brief or {},
@@ -145,29 +163,27 @@ async def revise_content(content_id: str):
             task.finished_at = datetime.utcnow()
             await ctx.persist()
             await session.commit()
-        except BaseException as e:
-            # BaseException 含 CancelledError：客户端断开/实例重启时不留残留 revising 状态
-            c.status = "published"
-            task.status = "failed"
-            task.error = str(e)[:500]
-            task.finished_at = datetime.utcnow()
-            try:
-                await session.commit()
-            except Exception:
-                pass
-            if isinstance(e, HTTPException):
-                raise
-            raise HTTPException(500, f"修订失败：{str(e)[:200]}")
+        REVISE_JOBS[job_id] = {"status": "done", "content_id": content_id}
+    except BaseException as e:
+        # BaseException 含 CancelledError：后台任务不受客户端断开影响；此处兜底复位状态
+        REVISE_JOBS[job_id] = {"status": "failed", "error": str(e)[:300]}
+        try:
+            async with SessionLocal() as session:
+                c = await session.get(Content, content_id)
+                if c:
+                    c.status = "published"
+                    await session.commit()
+        except Exception:
+            pass
 
-        return {
-            **_content_summary(c),
-            "brief": c.brief, "body": c.body, "evidences": c.evidences,
-            "formats": c.formats, "distribution": c.distribution,
-            "quality": c.quality, "decision_log": c.decision_log,
-            "prompt_versions": c.prompt_versions, "task_id": c.task_id,
-            "translation": c.translation or {},
-            "needs_zh": not (c.language or "").lower().startswith("zh"),
-        }
+
+@router.get("/contents/jobs/{job_id}")
+async def revise_job(job_id: str):
+    """轮询修订任务状态：running / done / failed。"""
+    job = REVISE_JOBS.get(job_id)
+    if not job:
+        return {"status": "unknown"}
+    return job
 
 
 @router.get("/contents/{content_id}/trace")
