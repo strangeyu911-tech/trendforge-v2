@@ -140,6 +140,20 @@ function fmtElapsed(from, to) {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
 }
 
+// 后端存的是 UTC（datetime.utcnow，无时区标记）。按 UTC 解析后转浏览器本地时区显示，
+// 保证与用户电脑系统时钟一致（服务器在 UTC，直接显示会早 8 小时）。
+// 兼容两种串：带偏移的 "2026-08-05T12:00:00+00:00" 与裸 UTC "2026-08-05T12:00:00"。
+function fmtTime(iso) {
+  if (!iso) return '—';
+  let s = String(iso);
+  if (!/[Zz]$|[+\-]\d{2}:?\d{2}$/.test(s)) s = s + 'Z';  // 裸 UTC 串补 Z
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('zh-CN', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
 /* ---------- 仪表盘 ---------- */
 async function overview() {
   root.innerHTML = '<div class="loading">加载中…</div>';
@@ -219,7 +233,7 @@ async function loadTasks() {
         <td>${statusTag(x.status)}</td>
         <td>${x.output && x.output.content_id ? `<a class="link" href="#content/${x.output.content_id}">${esc((x.output.title || '').slice(0, 30))}</a>` : esc((x.error || '').slice(0, 40))}</td>
         <td>${(x.total_duration_ms / 1000).toFixed(0)}s</td><td>${x.total_cost_cny.toFixed(4)}</td>
-        <td>${x.created_at.slice(5, 16).replace('T', ' ')}</td></tr>`).join('') || '<tr><td colspan="6">暂无运行</td></tr>'}
+        <td>${fmtTime(x.created_at)}</td></tr>`).join('') || '<tr><td colspan="6">暂无运行</td></tr>'}
     </table>`;
   } catch (e) { panel.innerHTML = errBox(e); }
 }
@@ -245,7 +259,7 @@ function contentsTable(list) {
       <td><span class="tag">${x.market}</span></td>
       <td>${x.quality_avg ? x.quality_avg.toFixed(1) : '-'}</td>
       <td>${x.formats.map(f => `<span class="tag gray">${f}</span>`).join('')}</td>
-      <td>${x.created_at.slice(5, 16).replace('T', ' ')}</td></tr>`).join('') || '<tr><td colspan="5">暂无内容，先去「跑供给」</td></tr>'}
+      <td>${fmtTime(x.created_at)}</td></tr>`).join('') || '<tr><td colspan="5">暂无内容，先去「跑供给」</td></tr>'}
   </table>`;
 }
 
@@ -590,7 +604,7 @@ async function evalView() {
       <div class="panel"><h3>评估报告</h3><div id="reports">
         ${reps.reports.map(r => `
           <div style="margin-bottom:18px">
-            <p style="font-size:12px;color:#77809a">${r.created_at.slice(0, 16).replace('T', ' ')} · 质量均分 ${r.quality_avg}</p>
+            <p style="font-size:12px;color:#77809a">${fmtTime(r.created_at)} · 质量均分 ${r.quality_avg}</p>
             ${r.findings.map(f => `<div class="finding">📊 ${esc(f)}</div>`).join('')}
             ${r.suggestions.map(s => `<div class="suggestion">💡 ${esc(s)}</div>`).join('')}
           </div>`).join('') || '暂无报告'}
@@ -657,7 +671,7 @@ async function loadGovernance() {
     document.getElementById('kb-history').innerHTML = '<h4 style="margin:6px 0 8px">历史补丁</h4>' +
       (p.patches.length ? p.patches.map(h => `<div class="finding" style="background:#f6f8fc">
         <span class="tag ${h.status === 'approved' ? 'green' : h.status === 'rejected' ? 'red' : 'orange'}">${h.status}</span>
-        ${esc(h.rationale.slice(0, 80))} · ${h.items.length} 项 · ${h.created_at.slice(5, 16).replace('T', ' ')}</div>`).join('') : '<span style="color:#77809a;font-size:12px">暂无</span>');
+        ${esc(h.rationale.slice(0, 80))} · ${h.items.length} 项 · ${fmtTime(h.created_at)}</div>`).join('') : '<span style="color:#77809a;font-size:12px">暂无</span>');
   } catch (e) { document.getElementById('kb-fresh').innerHTML = errBox(e); }
 }
 
