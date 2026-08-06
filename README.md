@@ -54,6 +54,15 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) — 11 个 Agent 的输入/输出/判断/降级规格
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — 数据模型、API、检索方案取舍
 
+## PM 设计文档（M4 · `v2.5-pm-docs`）
+
+> 从「AI Native 内容供给引擎 PM」视角补齐的四份交付物——用数据与矩阵回答"为什么是这套设计、怎么衡量、怎么规模化、真跑过吗"。
+
+- [docs/METRICS_FRAMEWORK_v1.0.md](docs/METRICS_FRAMEWORK_v1.0.md) — 供给引擎指标体系：北极星（有效内容供给率 QSR）+ 四层分解（供给效率/内容质量/消费表现/成本效率），每指标含口径与可执行 SQL
+- [docs/CONTENT_FORMAT_DESIGN_v1.0.md](docs/CONTENT_FORMAT_DESIGN_v1.0.md) — 内容形态设计：为什么是 article + 4 种派生形态、各形态消费场景/信息密度/钩子位置、形态 × 市场档案交叉矩阵
+- [docs/SCALE_DESIGN_v1.0.md](docs/SCALE_DESIGN_v1.0.md) — 规模化设计：日产 10 万条的架构演进（队列/分片/缓存/成本模型/审核抽样率）+ 已评估但未做清单
+- [docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md) — 真实运行报告：用 M1 真实信号跑 N 条，交成功率/失败归因/Rubric 五维分布/成本耗时（数据来自部署实例真实任务）
+
 ## 技术栈与取舍
 
 | 层 | 选型 | 为什么 |
