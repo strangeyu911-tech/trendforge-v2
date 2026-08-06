@@ -107,6 +107,14 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
 .kv-grid.sub { margin:2px 0; grid-template-columns:96px 1fr; }
 .kv-card { border-left:2px solid #e3e8f2; padding-left:10px; margin-bottom:8px; }
 .muted { color:#9aa5bd; }
+
+/* 真实信号溯源卡片 */
+.sig-list { list-style:none; padding:0; margin:14px 0 0; display:flex; flex-direction:column; gap:12px; }
+.sig-item { border:1px solid #e3e8f2; border-radius:10px; padding:12px 14px; background:#fbfcff; }
+.sig-title { font-weight:600; font-size:14px; color:#1f2a44; line-height:1.4; margin-bottom:6px; }
+.sig-meta { display:flex; flex-wrap:wrap; gap:4px; align-items:center; font-size:12px; }
+.sig-angle { margin-top:6px; font-size:12.5px; color:#5b6781; }
+.sig-angle::before { content:"💡 "; }
 .tag.block { display:inline-block; margin:2px 3px 2px 0; }
 
 /* ---------- 中文对照（面向中文运营的双语审核视图） ---------- */
