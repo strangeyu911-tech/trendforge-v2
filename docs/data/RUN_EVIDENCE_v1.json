@@ -1,0 +1,1124 @@
+{
+  "_note": "TrendForge V2 真实运行证据（部署实例 trendforge-v2-api.onrender.com，DeepSeek deepseek-v4-flash）",
+  "_captured_at": "2026-08-06T19:59+08:00",
+  "_env": "Render free tier（磁盘易失，线上原始记录已随重启丢失，本文件为唯一留存副本）",
+  "tasks": [
+    {
+      "id": "742a9352-71b4-4962-93f7-e1a1fd44b6af",
+      "market": "CN",
+      "status": "running",
+      "progress": "writer",
+      "duration_ms": 0,
+      "cost_cny": 0.0,
+      "error": "",
+      "content_id": null,
+      "created_at": "2026-08-06T11:55:41.843566"
+    },
+    {
+      "id": "4dd17a02-30f5-4e84-a780-02cdafac53ff",
+      "market": "BR",
+      "status": "running",
+      "progress": "writer",
+      "duration_ms": 0,
+      "cost_cny": 0.0,
+      "error": "",
+      "content_id": null,
+      "created_at": "2026-08-06T11:55:36.844323"
+    },
+    {
+      "id": "4673c15f-0504-433d-b6db-66ebf97236ad",
+      "market": "JP",
+      "status": "running",
+      "progress": "fact_checker",
+      "duration_ms": 0,
+      "cost_cny": 0.0,
+      "error": "",
+      "content_id": null,
+      "created_at": "2026-08-06T11:46:41.959104"
+    },
+    {
+      "id": "973f8254-6d9c-411e-b5a3-082140c4365d",
+      "market": "KR",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 587952,
+      "cost_cny": 0.3686,
+      "error": "",
+      "content_id": "98743551-f4bb-4fe2-88c6-d6d40a33cf9d",
+      "created_at": "2026-08-06T11:46:35.890183"
+    },
+    {
+      "id": "e7996967-3fb7-4dcd-8314-6578f8130af9",
+      "market": "US",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 620605,
+      "cost_cny": 0.3221,
+      "error": "",
+      "content_id": "b23193d1-1b5e-4fbf-8cbc-8f80c1e98ccb",
+      "created_at": "2026-08-06T11:46:35.604218"
+    },
+    {
+      "id": "35d62fc4-44ad-4b3b-a09a-1bcf1c76cef3",
+      "market": "CN",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 720624,
+      "cost_cny": 0.409,
+      "error": "",
+      "content_id": "3e06569d-a696-4279-aa89-1f14a6f49b62",
+      "created_at": "2026-08-06T11:45:27.992980"
+    },
+    {
+      "id": "28c55dce-81fd-4f0c-ba71-5ffddb6a5fe3",
+      "market": "BR",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 819566,
+      "cost_cny": 0.5653,
+      "error": "",
+      "content_id": "c6e4d18f-b8b6-48c9-a99a-d0b2667b0c47",
+      "created_at": "2026-08-06T11:45:02.501604"
+    },
+    {
+      "id": "c8ef231e-023a-4bb4-b075-884d684960bf",
+      "market": "KR",
+      "status": "failed",
+      "progress": "failed",
+      "duration_ms": 507068,
+      "cost_cny": 0.2152,
+      "error": "总编 reject：正文内容与选题严重脱节，后半部分为无关英文内容，且核心论断未经支持，存在事实崩塌问题，不可修复。",
+      "content_id": null,
+      "created_at": "2026-08-06T11:36:31.179092"
+    },
+    {
+      "id": "730c67cb-b03d-4635-986b-7586bac43493",
+      "market": "US",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 575901,
+      "cost_cny": 0.2874,
+      "error": "",
+      "content_id": "fa653225-0e0f-433a-ba73-a4afaaa44085",
+      "created_at": "2026-08-06T11:36:29.605346"
+    },
+    {
+      "id": "24753ccd-8941-482e-830b-6644ab56dc0f",
+      "market": "JP",
+      "status": "failed",
+      "progress": "failed",
+      "duration_ms": 956671,
+      "cost_cny": 0.5867,
+      "error": "总编 reject：核心事实（Stripe发布Agent Toolkit）未被证实，且安全层构成等关键数据均无依据，事实基础崩塌，无法通过。文章虽结构清晰，但基于不实信息展开，整体",
+      "content_id": null,
+      "created_at": "2026-08-06T11:36:29.443784"
+    },
+    {
+      "id": "f820527c-7275-493d-85a3-b0efd324782b",
+      "market": "CN",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 851874,
+      "cost_cny": 0.5558,
+      "error": "",
+      "content_id": "b6784a76-c5ca-43ca-8641-3261baf7fcc1",
+      "created_at": "2026-08-06T11:20:34.972318"
+    },
+    {
+      "id": "c522616d-2362-4159-9e05-b3b297aac455",
+      "market": "BR",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 827162,
+      "cost_cny": 0.4073,
+      "error": "",
+      "content_id": "00d1fae8-d390-4627-852f-a1e3c648470a",
+      "created_at": "2026-08-06T11:19:49.951158"
+    },
+    {
+      "id": "590a453a-2eeb-442a-b03a-440697cefd4c",
+      "market": "JP",
+      "status": "failed",
+      "progress": "failed",
+      "duration_ms": 557631,
+      "cost_cny": 0.1834,
+      "error": "总编 reject：正文内容严重偏离选题，仅首段提及AI支付风险，后续大量篇幅为电竞、百度、中超等无关新闻报道，且存在无据论断，属于不可修复的事实崩塌与结构混乱。",
+      "content_id": null,
+      "created_at": "2026-08-06T11:11:33.383907"
+    },
+    {
+      "id": "2fb70222-823d-4271-928d-878461512e1b",
+      "market": "US",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 490721,
+      "cost_cny": 0.1708,
+      "error": "",
+      "content_id": "7d0750f6-483f-43d3-991c-d1d26b6a3a2d",
+      "created_at": "2026-08-06T11:11:33.296232"
+    },
+    {
+      "id": "b6717be0-882e-492f-ac50-5613152c3228",
+      "market": "KR",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 666892,
+      "cost_cny": 0.2242,
+      "error": "",
+      "content_id": "219348cc-7bac-4ed3-972a-10c2b4a3d6bd",
+      "created_at": "2026-08-06T11:11:32.908360"
+    },
+    {
+      "id": "85f5002d-790f-4ebc-a899-2fdf5d115d2f",
+      "market": "US",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 829777,
+      "cost_cny": 0.5645,
+      "error": "",
+      "content_id": "69749c21-0f87-4b32-86e5-dc653deca4bc",
+      "created_at": "2026-08-05T11:57:37.329380"
+    },
+    {
+      "id": "ea9ffde0-2ce8-4bc6-83f6-e57095a0caec",
+      "market": "JP",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 624411,
+      "cost_cny": 0.2946,
+      "error": "",
+      "content_id": "0ecdee9f-60d2-4f21-b21f-b93c2d4644a2",
+      "created_at": "2026-08-05T11:46:49.336502"
+    },
+    {
+      "id": "c5a30145-f525-472a-b7e3-1d9cfa6580b9",
+      "market": "CN",
+      "status": "done",
+      "progress": "done",
+      "duration_ms": 637786,
+      "cost_cny": 0.4465,
+      "error": "",
+      "content_id": "c0ab4c4b-6882-43f5-b1d0-2ddbf8294836",
+      "created_at": "2026-08-05T11:36:06.750844"
+    },
+    {
+      "id": "5129e05b-8150-4820-a25d-7a79d9276fb5",
+      "market": "US",
+      "status": "failed",
+      "progress": "failed",
+      "duration_ms": 489129,
+      "cost_cny": 0.2967,
+      "error": "总编 reject：稿件为多篇新闻片段拼凑，逻辑断裂且含截断文本；核心角度（junior developers 如何利用 Claude 4）完全未兑现；事实核查出现 unsuppo",
+      "content_id": null,
+      "created_at": "2026-08-05T11:27:53.288030"
+    },
+    {
+      "id": "8594fd51-10fc-42f3-bebe-ff8ccb0860c8",
+      "market": "US",
+      "status": "failed",
+      "progress": "failed",
+      "duration_ms": 225913,
+      "cost_cny": 0.1269,
+      "error": "总编 reject：正文混入大量无关内容（歌手、足球运动员等），核心信息严重跑偏，且有未证实论断（宣称已发布但实际为即将发布）。事实准确性和角度均灾难性崩塌，无法作为可发布的稿件。",
+      "content_id": null,
+      "created_at": "2026-08-05T11:22:12.126782"
+    }
+  ],
+  "contents": [
+    {
+      "id": "c6e4d18f-b8b6-48c9-a99a-d0b2667b0c47",
+      "market": "BR",
+      "language": "pt",
+      "title": "MCP: o protocolo que dá memória (e segurança) de verdade aos seus agentes de IA",
+      "topic": "Model Context Protocol (MCP): o protocolo que está se tornando o padrão para memória e segurança em agentes de IA",
+      "angle": "Como o MCP resolve os dois maiores desafios dos agentes de IA (memória e segurança) e por que devs brasileiros devem adotá-lo agora para não ficarem para trás no mercado.",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 3.8,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 4.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "formats": [
+        "card",
+        "brief_news",
+        "comment"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Estudo de Caso: Por que ignorei o padrão da indústria ao arquitetar o Manypost",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-07-28",
+          "engagement": {
+            "score": 5,
+            "comments": 0
+          }
+        },
+        {
+          "title": "Equiparação Salarial: Seu Direito de Receber Igual para o Mesmo Trabalho",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 0
+          }
+        },
+        {
+          "title": "Container queries can check more than size — style queries let components read custom property values",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 5,
+            "comments": 0
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 7,
+        "supported": 5,
+        "support_ratio": 0.71,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "O Model Context Protocol (MCP) é um padrão aberto criado pela Anthropic que padroniza a comunicação ",
+          "No Brasil, o assunto MCP ainda é restrito a bolhas."
+        ],
+        "confidence": 0.79
+      }
+    },
+    {
+      "id": "3e06569d-a696-4279-aa89-1f14a6f49b62",
+      "market": "CN",
+      "language": "zh",
+      "title": "CLAUDE.md 配置优化：为什么你的AI Agent越配越笨？：最新进展盘点",
+      "topic": "CLAUDE.md 配置优化：为什么你的AI Agent越配越笨？",
+      "angle": "从CLAUDE.md的轻量化设计出发，提出“少即是多”的Agent记忆管理原则，并映射到国内AI编程工具的实践",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 2.4,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 2.0,
+        "readability": 2.0,
+        "local_fit": 3.0,
+        "engagement": 2.0
+      },
+      "formats": [
+        "video_script",
+        "card",
+        "brief_news"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "Your AI agent can pay for anything now. That's the problem.",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 7,
+        "supported": 6,
+        "support_ratio": 0.86,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "国内AI编程工具（如通义灵码、文心快码）近期开始支持类CLAUDE.md的Agent配置"
+        ],
+        "confidence": 0.89
+      }
+    },
+    {
+      "id": "b23193d1-1b5e-4fbf-8cbc-8f80c1e98ccb",
+      "market": "US",
+      "language": "en",
+      "title": "OWASP's first AI Agent Threat Model release：最新进展盘点",
+      "topic": "OWASP's first AI Agent Threat Model release",
+      "angle": "How to translate OWASP's first agent threat model into a concrete audit checklist for production AI agents, using real attack-path data to set security priorities.",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 1.4,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 1.0,
+        "readability": 1.0,
+        "local_fit": 1.0,
+        "engagement": 2.0
+      },
+      "formats": [
+        "card",
+        "brief_news",
+        "video_script"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "Coding Agent Memory: Why Storing Everything Fails",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 1,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 6,
+        "supported": 3,
+        "support_ratio": 0.5,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "OWASP just released its first dedicated AI Agent Threat Model this week.",
+          "该威胁模型为agent特有攻击（如prompt注入、工具滥用）提供共同语言。",
+          "早期采用者将其映射到现有技术栈可避免昂贵的返工。"
+        ],
+        "confidence": 0.65
+      }
+    },
+    {
+      "id": "98743551-f4bb-4fe2-88c6-d6d40a33cf9d",
+      "market": "KR",
+      "language": "ko",
+      "title": "코드 생성이 느려졌다면? Claude Code 메모리 관리 개선으로 개발 속도 되찾기",
+      "topic": "Anthropic의 Claude Code 최신 업데이트: AI 에이전트 메모리 관리 기능 개선",
+      "angle": "AI 코딩 에이전트의 메모리 과부하로 인한 성능 저하를 해소하고 개발 생산성을 높이는 구체적인 설정 방법",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 3.4,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 4.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 3.0
+      },
+      "formats": [
+        "card",
+        "video_script"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "Coding Agent Memory: Why Storing Everything Fails",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 1,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 8,
+        "supported": 3,
+        "support_ratio": 0.38,
+        "weak_claims": [
+          "SDK 2.0의 장기 메모리는 에이전트가 세션을 넘어 프로젝트 맥락을 유지할 수 있게 한다",
+          "결정적 도구 재생은 모든 도구 호출을 정확히 기록해 재현함으로써 오류 발생 지점을 빠르게 추적하도록 돕는다",
+          "Anthropic은 Claude Code를 중심으로 빠르게 성장해 기업 고객을 1만 개 이상 확보했다"
+        ],
+        "unsupported_claims": [
+          "관리자는 권한 프레임워크를 통해 에이전트가 소비하거나 수정할 수 있는 범위를 제한할 수 있다",
+          "AI 산출물에 대한 보안 검증도 우선 투자 분야로 꼽혔다"
+        ],
+        "confidence": 0.65
+      }
+    },
+    {
+      "id": "fa653225-0e0f-433a-ba73-a4afaaa44085",
+      "market": "US",
+      "language": "en",
+      "title": "MCP's hidden features: the resource and sampling specs that let AI clients act on live data：最新进展盘点",
+      "topic": "MCP's hidden features: the resource and sampling specs that let AI clients act on live data",
+      "angle": "For AI app developers, uncover the overlooked MCP capabilities (resource templates, sampling, and prompts) that turn a simple client into an autonomous tool—with concrete code examples and performance numbers.",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 1.6,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 2.0,
+        "readability": 1.0,
+        "local_fit": 2.0,
+        "engagement": 1.0
+      },
+      "formats": [
+        "video_script",
+        "card",
+        "brief_news"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "Container queries can check more than size — style queries let components read custom property values",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 5,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 7,
+        "supported": 5,
+        "support_ratio": 0.71,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "MCP adoption exploded after Anthropic open-sourced it in late 2024",
+          "The latest spec updates (sampling, resource templates) are just now being stabilized"
+        ],
+        "confidence": 0.79
+      }
+    },
+    {
+      "id": "b6784a76-c5ca-43ca-8641-3261baf7fcc1",
+      "market": "CN",
+      "language": "zh",
+      "title": "AI代付时代的安全底线：从支付宝内测争议看智能体风控的三大缺口",
+      "topic": "支付宝内测AI代付功能，安全底线如何守护？",
+      "angle": "从支付宝内测AI代付的争议切入，为金融科技从业者拆解AI代理支付的安全漏洞，并给出可落地的对抗风控框架",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 4.0,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 5.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "formats": [
+        "card",
+        "video_script",
+        "brief_news"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Your AI agent can pay for anything now. That's the problem.",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "Dev log #15 Refining the Craft: A week of Neovim UI hacking and portfolio architecture",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 5,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 8,
+        "supported": 6,
+        "support_ratio": 0.75,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "一家宁波汽车零部件厂商用6个智能体接管采购询价比价流程，单笔采购平均处理时间从3天缩短至4小时",
+          "IDC数据显示，2026年上半年中国企业级智能体市场规模达96亿元，同比增长158%"
+        ],
+        "confidence": 0.8
+      }
+    },
+    {
+      "id": "00d1fae8-d390-4627-852f-a1e3c648470a",
+      "market": "BR",
+      "language": "pt",
+      "title": "Claude agora se lembra de tudo? O novo SDK de agentes da Anthropic e como usar com segurança",
+      "topic": "Anthropic lança novo recurso de memória para o Claude",
+      "angle": "Como desenvolvedores brasileiros podem usar a nova memória do Claude para otimizar agentes de IA no dia a dia, sem negligenciar a segurança dos dados.",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 3.6,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 4.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "formats": [
+        "card",
+        "brief_news",
+        "comment"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Estudo de Caso: Por que ignorei o padrão da indústria ao arquitetar o Manypost",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-07-28",
+          "engagement": {
+            "score": 5,
+            "comments": 0
+          }
+        },
+        {
+          "title": "Equiparação Salarial: Seu Direito de Receber Igual para o Mesmo Trabalho",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 0
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 7,
+        "supported": 3,
+        "support_ratio": 0.43,
+        "weak_claims": [
+          "Na terça-feira, 29 de julho, a Anthropic lançou o Claude Agent SDK 2.0",
+          "O SDK inclui três novidades principais: memória de longo prazo, replay determinístico de uso de ferr"
+        ],
+        "unsupported_claims": [
+          "early adopters, usando o SDK, cortaram em média 63% das etapas manuais em fluxos de processamento de",
+          "O framework de permissões do SDK 2.0 ajuda a limitar o que o agente pode fazer — gastar, modificar, "
+        ],
+        "confidence": 0.67
+      }
+    },
+    {
+      "id": "219348cc-7bac-4ed3-972a-10c2b4a3d6bd",
+      "market": "KR",
+      "language": "ko",
+      "title": "메타 AI 에이전트 보안 취약점 사례와 한국 기업의 위협 모델링 적용：最新进展盘点",
+      "topic": "메타 AI 에이전트 보안 취약점 사례와 한국 기업의 위협 모델링 적용",
+      "angle": "메타가 공개한 AI 에이전트 보안 사고를 통해 한국 기업이 놓치기 쉬운 3가지 위협 모델링 맹점을 짚어보고, 실제 도입 시 참고할 수 있는 체크리스트 제시",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 1.8,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 2.0,
+        "readability": 1.0,
+        "local_fit": 2.0,
+        "engagement": 2.0
+      },
+      "formats": [
+        "card",
+        "video_script"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "5 Underrated MCP Features That Make AI Clients Smarter",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 2
+          }
+        },
+        {
+          "title": "Coding Agent Memory: Why Storing Everything Fails",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 1,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 8,
+        "supported": 5,
+        "support_ratio": 0.62,
+        "weak_claims": [
+          "메타의 실제 보안 사고가 공개되며 보안 리스크에 대한 우려가 높아졌다"
+        ],
+        "unsupported_claims": [
+          "메타 AI 에이전트 보안 취약점 사례와 한국 기업의 위협 모델링 적용受到关注",
+          "국내 대기업과 스타트업의 AI 에이전트 도입이 급증하는 시점"
+        ],
+        "confidence": 0.75
+      }
+    },
+    {
+      "id": "7d0750f6-483f-43d3-991c-d1d26b6a3a2d",
+      "market": "US",
+      "language": "en",
+      "title": "Meta's AI agent red-team report: Security failures and what devs must know：最新进展盘点",
+      "topic": "Meta's AI agent red-team report: Security failures and what devs must know",
+      "angle": "How the 4 common security traps in Meta's leaked agent red-team report can be fixed with 3 lines of code — a practical guide for AI engineers",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 1.2,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 1.0,
+        "readability": 1.0,
+        "local_fit": 1.0,
+        "engagement": 1.0
+      },
+      "formats": [
+        "brief_news",
+        "card",
+        "video_script"
+      ],
+      "signal_count": 12,
+      "signals": [
+        {
+          "title": "How would you decide, whether the content is good or bad?",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-03",
+          "engagement": {
+            "score": 140,
+            "comments": 85
+          }
+        },
+        {
+          "title": "AI agent security: a threat model for autonomous agents",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "Meta's AI Hacked a Company. The Safety Test Was the Weak Link",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 1
+          }
+        },
+        {
+          "title": "Coding Agent Memory: Why Storing Everything Fails",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 1,
+            "comments": 0
+          }
+        },
+        {
+          "title": "How to Keep Your CLAUDE.md Light (and Why More Rules Make Agents Worse)",
+          "source": "Dev.to",
+          "url": null,
+          "published_at": "2026-08-06",
+          "engagement": {
+            "score": 0,
+            "comments": 0
+          }
+        }
+      ],
+      "fact_check": {
+        "claim_count": 4,
+        "supported": 3,
+        "support_ratio": 0.75,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "Meta published its first comprehensive public red-team dataset on agent-specific vulnerabilities on "
+        ],
+        "confidence": 0.85
+      }
+    },
+    {
+      "id": "69749c21-0f87-4b32-86e5-dc653deca4bc",
+      "market": "US",
+      "language": "en",
+      "title": "Apple's $1,999 Foldable: The Data Behind the Premium Price",
+      "topic": "Apple's upcoming foldable iPhone (rumored at $1,999) and its value proposition",
+      "angle": "A data-driven comparison showing whether Apple's first foldable justifies its premium price over Samsung and Pixel, and for whom it's actually worth it.",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 3.2,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 2.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 3.0
+      },
+      "formats": [
+        "card",
+        "video_script",
+        "brief_news"
+      ],
+      "signal_count": 0,
+      "signals": [],
+      "fact_check": {
+        "claim_count": 7,
+        "supported": 5,
+        "support_ratio": 0.71,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "该设备配备7.8英寸内屏和5.5英寸外屏。",
+          "苹果已预订首年1200万块面板，Luxshare和Goertek在越南增设装配线。"
+        ],
+        "confidence": 0.79
+      }
+    },
+    {
+      "id": "0ecdee9f-60d2-4f21-b21f-b93c2d4644a2",
+      "market": "JP",
+      "language": "ja",
+      "title": "月間2.2億件のクエリが示すAI検索の実力——Googleとの使い分けと日本企業への示唆",
+      "topic": "Perplexityの月間検索クエリが2.2億件に到達——その背景と日本での活用意義",
+      "angle": "AI検索の実力をデータで解説し、Google検索との使い分けや日本のビジネスシーンでの活用法を提示する",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 3.8,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 4.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "formats": [
+        "brief_news",
+        "card",
+        "comment"
+      ],
+      "signal_count": 0,
+      "signals": [],
+      "fact_check": {
+        "claim_count": 8,
+        "supported": 7,
+        "support_ratio": 0.88,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "Perplexityの自社ブラウザ「Comet」は、2026年2月のローンチからわずか数か月で月間アクティブユーザー3000万人に到達している"
+        ],
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "c0ab4c4b-6882-43f5-b1d0-2ddbf8294836",
+      "market": "CN",
+      "language": "zh",
+      "title": "文心5.0发布，职场人如何用“技能升级”对冲AI焦虑？",
+      "topic": "文心大模型5.0发布引发职场技能升级潮",
+      "angle": "从职场技能焦虑切入，以文心5.0发布为具体事件，为白领和程序员提供理性应对AI替代焦虑的技能升级路径与工具实操指南。",
+      "status": "published",
+      "verdict": "revise",
+      "quality_avg": 4.4,
+      "scores": {
+        "accuracy": 4.0,
+        "angle": 5.0,
+        "readability": 4.0,
+        "local_fit": 5.0,
+        "engagement": 4.0
+      },
+      "formats": [
+        "video_script",
+        "card",
+        "comment"
+      ],
+      "signal_count": 0,
+      "signals": [],
+      "fact_check": {
+        "claim_count": 8,
+        "supported": 7,
+        "support_ratio": 0.88,
+        "weak_claims": [],
+        "unsupported_claims": [
+          "其团队调研的3400家企业中，有41%在上半年新设了'AI流程专员'或类似岗位"
+        ],
+        "confidence": 0.9
+      }
+    }
+  ]
+}
