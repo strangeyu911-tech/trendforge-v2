@@ -8,4 +8,7 @@ dist/
 node_modules/
 .workbuddy/
 
+# 运行时真实信号缓存（fetch_market_signals 落盘，非源码）
+src/app/data/signal_cache/
+
 .preview/
