@@ -111,6 +111,7 @@ async def run_pipeline(market_code: str) -> dict:
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
                 quality={"fact_check": data.get("fact_check", {}), **data.get("review", {})},
                 decision_log=ctx.decision_log, prompt_versions=ctx.prompt_versions,
+                signals=data.get("signals", []),
                 is_fallback=any(s.status == "degraded" for s in ctx.spans),
             )
             session.add(content)

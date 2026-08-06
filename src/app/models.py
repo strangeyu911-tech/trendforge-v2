@@ -125,6 +125,8 @@ class Content(Base):
     # 中文回译镜像：非中文市场的内容供中文运营审核用，按需生成后缓存
     # {lang, title, summary, brief:{...}, formats:{...}, model, generated_at}
     translation: Mapped[dict] = mapped_column(JSON, default=dict)
+    # 驱动本内容的真实信号溯源（SignalScout 实时拉取，含来源/时间/互动/原文链接）
+    signals: Mapped[list] = mapped_column(JSON, default=list)
     is_fallback: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
@@ -212,6 +214,11 @@ async def migrate_db() -> None:
             await conn.execute(text("ALTER TABLE contents ADD COLUMN translation JSON"))
         await conn.execute(text(
             "UPDATE contents SET translation = '{}' WHERE translation IS NULL"))
+        # contents.signals：真实信号溯源
+        if "signals" not in ccols:
+            await conn.execute(text("ALTER TABLE contents ADD COLUMN signals JSON"))
+        await conn.execute(text(
+            "UPDATE contents SET signals = '[]' WHERE signals IS NULL"))
 
 
 async def init_db() -> None:
