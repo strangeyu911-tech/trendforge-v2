@@ -60,6 +60,7 @@ async def content_detail(content_id: str):
             "prompt_versions": c.prompt_versions, "task_id": c.task_id,
             # 中文回译镜像（非中文市场才有；缺失时前端按需触发生成）
             "translation": c.translation or {},
+            "signals": c.signals or [],
             "needs_zh": not (c.language or "").lower().startswith("zh"),
         }
 
