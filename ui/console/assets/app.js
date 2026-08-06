@@ -432,6 +432,7 @@ function paintTab() {
   const renderers = {
     article: () => renderArticle(c), brief: () => renderBrief(c),
     formats: () => renderFormats(c), dist: () => renderDist(c.distribution),
+    signals: () => renderSignals(c),
     trace: () => renderTrace(c.id), quality: () => renderQuality(c.quality),
   };
   const tab = ZH.tab;
@@ -596,6 +597,36 @@ const PLATFORM_LABEL = {
 
 /* 质量裁决枚举 → 中文 */
 const VERDICT_LABEL = { publish: '可发布', revise: '需修改', reject: '不通过' };
+
+/* ---------- 真实信号溯源：展示 SignalScout 实时抓取的源头（来源/时间/真实互动/原文链接） ---------- */
+function renderSignals(c) {
+  const sigs = c.signals || [];
+  if (!sigs.length) return '<div class="panel">本次内容未关联实时真实信号（可能由兜底路径从本地 KB 生成）。</div>';
+  const items = sigs.map(s => {
+    const e = s.engagement || {};
+    const eng = [];
+    if (e.score != null && e.score !== '') eng.push(`互动值 ${esc(String(e.score))}`);
+    if (e.comments != null && e.comments !== '') eng.push(`评论 ${esc(String(e.comments))}`);
+    if (e.tone != null && e.tone !== '') eng.push(`情感 ${esc(String(e.tone))}`);
+    const link = s.source_url
+      ? `<a class="link" href="${esc(s.source_url)}" target="_blank" rel="noopener">原文 ↗</a>`
+      : (s.source ? esc(s.source) : '');
+    return `<li class="sig-item">
+      <div class="sig-title">${esc(s.title || '(无标题)')}</div>
+      <div class="sig-meta">
+        <span class="tag gray">${esc(s.source || '—')}</span>
+        ${s.published_at ? `<span class="tag gray">${esc(String(s.published_at).slice(0, 10))}</span>` : ''}
+        ${s.category ? `<span class="tag gray">${esc(s.category)}</span>` : ''}
+        ${eng.length ? `<span class="tag green">${eng.join(' · ')}</span>` : ''}
+        ${link}
+      </div>
+      ${s.angle_hint ? `<div class="sig-angle">角度建议：${esc(s.angle_hint)}</div>` : ''}
+    </li>`;
+  }).join('');
+  return `<div class="panel"><h3>驱动本内容的实时真实信号</h3>
+    <p class="muted">信号由 SignalScout 从 Hacker News / Dev.to / GDELT 等公开源实时抓取，互动数据为真实人类消费行为。下方链接可点击溯源。</p>
+    <ul class="sig-list">${items}</ul></div>`;
+}
 
 function renderFormats(c) {
   const fmts = c.formats || {};
