@@ -61,7 +61,9 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - [docs/METRICS_FRAMEWORK_v1.0.md](docs/METRICS_FRAMEWORK_v1.0.md) — 供给引擎指标体系：北极星（有效内容供给率 QSR）+ 四层分解（供给效率/内容质量/消费表现/成本效率），每指标含口径与可执行 SQL
 - [docs/CONTENT_FORMAT_DESIGN_v1.0.md](docs/CONTENT_FORMAT_DESIGN_v1.0.md) — 内容形态设计：为什么是 article + 4 种派生形态、各形态消费场景/信息密度/钩子位置、形态 × 市场档案交叉矩阵
 - [docs/SCALE_DESIGN_v1.0.md](docs/SCALE_DESIGN_v1.0.md) — 规模化设计：日产 10 万条的架构演进（队列/分片/缓存/成本模型/审核抽样率）+ 已评估但未做清单
-- [docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md) — 真实运行报告：用 M1 真实信号跑 N 条，交成功率/失败归因/Rubric 五维分布/成本耗时（数据来自部署实例真实任务）
+- [docs/RUN_REPORT_v1.1.md](docs/RUN_REPORT_v1.1.md) — **真实运行报告（定稿版）**：M1 真实信号驱动、17 条真实运行，交出产出率 70.6% / FPY 0% / 单位有效成本 ¥0.50（含废稿摊销）/ 失败归因 / Rubric 五维，并记录一次扩样失败暴露的环境可靠性问题
+  - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
+  - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
 
 ## 技术栈与取舍
 
