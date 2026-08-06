@@ -110,6 +110,35 @@ ORDER BY degrade_rate DESC;
 - **裁决结构**：`pass / revise / reject` 占比（健康系统应 pass 占多数，reject 极少数）。
 - **无据论断数**：`quality.fact_check.unsupported_claims` 计数——衡量"AI 有没有在编"。
 
+#### 2.2.1 主题一致性（TCS）闸门指标（M5 新增）
+
+TopicGuard 在 Writer 后、FactChecker 前插入，用 `[ev_xxx]` 引用结构（**零 token 成本、语言无关**）计算 **Topic Consistency Score**，专门拦截"拼盘稿"（主线被无关新闻污染）。
+
+| 字段 | 含义 | 数据来源 |
+|---|---|---|
+| `quality.topic_guard.tcs` | 主题一致性分（0–1，越高越纯） | `app/rag/tcs.py` 规则计算 |
+| `quality.topic_guard.main_ratio` | 主干引用占比（≥0.6 才放行） | 引用 × `is_main` 标记 |
+| `quality.topic_guard.cross_docs` | 不同文档数（≤2 才放行） | 引用去重计数 |
+| `quality.topic_guard.drift_sections` | 被判定为漂移的节索引 | 有引用却无主干引用 / 词面相关度 <0.15 |
+| `quality.topic_guard.passed` | 是否通过闸门 | 上述三条件全满足 |
+
+**为什么放进质量层**：拼盘稿即便 Rubric 五维分高，也是"内容不达标"——它破坏的是"这篇内容是否在讲一件事"。TCS 把"主题纯度"显式量化，和 Rubric 互补：Rubric 管"写得好不好"，TCS 管"有没有跑题"。
+
+```sql
+-- 主题一致性闸门命中率（漂移拦截 / 总供给）
+SELECT
+  COUNT(*)                                                       AS attempts,
+  SUM(CASE WHEN json_extract(quality,'$.topic_guard.passed')=1
+           THEN 1 ELSE 0 END)                                   AS passed,
+  ROUND(SUM(CASE WHEN json_extract(quality,'$.topic_guard.passed')=1
+                 THEN 1 ELSE 0 END)*1.0/NULLIF(COUNT(*),0),3)   AS tcs_pass_rate,
+  ROUND(AVG(json_extract(quality,'$.topic_guard.tcs')),3)       AS avg_tcs
+FROM contents
+WHERE quality IS NOT NULL;
+```
+
+> 状态：TCS 自 M5 起每次供给自动落库 `quality.topic_guard`；闸门可零成本全量计算。设计取舍见 [docs/DRIFT_GUARD_DESIGN_v1.0.md](docs/DRIFT_GUARD_DESIGN_v1.0.md)。
+
 ```sql
 -- 五维均值 + 裁决结构（JSON 字段用 json_extract 展开）
 SELECT
@@ -234,6 +263,7 @@ GROUP BY t.market;
 |---|---|---|
 | 信号 `signals[]` | **真实** | M1：HN Algolia / Dev.to / GDELT，带真实 points/comments/tone 与原文链接 |
 | 质量 Rubric / 裁决 | **真实**（LLM 产出） | `EditorAgent` 每次供给落库 |
+| 主题一致性 TCS / 闸门 | **真实**（规则计算，零 token） | `TopicGuard` 每次供给落库 `quality.topic_guard` |
 | 成本 / 耗时 / span | **真实** | 每次 LLM 调用记录 token 与耗时 |
 | 失败归因 `bad_cases` | **真实** | 链路否决/降级自动入档 |
 | 消费事件 `content_events` | **仿真** | `simulator.py` 对真实互动锚点拟合；UI 标"仿真" |

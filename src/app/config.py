@@ -25,8 +25,17 @@ class Settings:
     max_review_rounds: int = int(os.getenv("TF_MAX_REVIEW_ROUNDS", "2"))
     top_signals: int = int(os.getenv("TF_TOP_SIGNALS", "12"))
     top_trends: int = int(os.getenv("TF_TOP_TRENDS", "4"))
-    top_evidences: int = int(os.getenv("TF_TOP_EVIDENCES", "10"))
+    # 证据数 10→5（L0 反漂移）：证据集是 Writer 的唯一素材来源，
+    # 多喂一条无关证据就多一个跑题入口。少而准 > 多而杂。
+    top_evidences: int = int(os.getenv("TF_TOP_EVIDENCES", "5"))
     cache_ttl_hours: int = int(os.getenv("TF_CACHE_TTL_HOURS", "72"))
+
+    # 反主题漂移闸门
+    # BM25 绝对分下限：低于此分视为与选题无实质词面关联（相对阈值挡不住"全员不相关"）
+    topic_min_score: float = float(os.getenv("TF_TOPIC_MIN_SCORE", "1.0"))
+    # TCS 硬闸：主干文档引用占比下限 / 允许引用的背景文档篇数上限
+    tcs_main_ratio_min: float = float(os.getenv("TF_TCS_MAIN_RATIO", "0.6"))
+    tcs_cross_doc_max: int = int(os.getenv("TF_TCS_CROSS_DOC_MAX", "2"))
 
     # 形态派生清单（FormatAdapter 默认产出）
     formats: tuple = ("video_script", "card", "brief_news", "comment")

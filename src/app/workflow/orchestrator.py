@@ -19,6 +19,7 @@ from app.agents.fact_checker import FactCheckerAgent
 from app.agents.format_adapter import FormatAdapterAgent
 from app.agents.researcher import ResearcherAgent
 from app.agents.signal_scout import SignalScoutAgent
+from app.agents.topic_guard import TopicGuardAgent
 from app.agents.trend_analyst import TrendAnalystAgent
 from app.agents.writer import WriterAgent
 from app.config import settings
@@ -43,6 +44,7 @@ async def run_revise_rounds(ctx: RunContext, data: dict) -> tuple[dict, int]:
         rewrite_inputs = dict(data)
         rewrite_inputs["editor_feedback"] = data["review"].get("revision_advice", "")
         data.update(await WriterAgent()._exec(ctx, rewrite_inputs))
+        data.update(await TopicGuardAgent()._exec(ctx, data))
         data.update(await FactCheckerAgent()._exec(ctx, data))
         data.update(await EditorAgent()._exec(ctx, data))
     return data, rounds
@@ -75,6 +77,8 @@ async def run_pipeline(market_code: str) -> dict:
                     if not data.get("evidences"):
                         raise PipelineRejected("无证据支撑，终止供给（拒绝无米之炊）")
                     data.update(await WriterAgent()._exec(ctx, data))
+                    # 主题一致性硬闸：在 FactChecker/Editor 烧钱之前拦截漂移，定点重写
+                    data.update(await TopicGuardAgent()._exec(ctx, data))
                     data.update(await FactCheckerAgent()._exec(ctx, data))
                     data.update(await EditorAgent()._exec(ctx, data))
                     # Editor 回退循环
@@ -109,7 +113,9 @@ async def run_pipeline(market_code: str) -> dict:
                 brief=data["brief"], title=article["title"], summary=article.get("summary", ""),
                 body=article["body"], evidences=data["evidences"],
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
-                quality={"fact_check": data.get("fact_check", {}), **data.get("review", {})},
+                quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
+                         "topic_guard": data.get("topic_guard", {}),
+                         "evidence_guard": data.get("evidence_guard", {})},
                 decision_log=ctx.decision_log, prompt_versions=ctx.prompt_versions,
                 signals=data.get("signals", []),
                 is_fallback=any(s.status == "degraded" for s in ctx.spans),

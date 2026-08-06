@@ -23,7 +23,7 @@ V2 回答的是更进一步的问题：**AI 能不能像一支内容团队一样
 
 ```
 SENSE 感知      SignalScout → TrendAnalyst → AudienceInsight → AngleEditor
-PRODUCE 生产    Researcher → Writer ⇄ FactChecker → Editor（revise 回退 ≤2 轮）
+PRODUCE 生产    Researcher → Writer → TopicGuard → FactChecker → Editor（revise 回退 ≤2 轮）
 AMPLIFY 放大    FormatAdapter → Distributor
 EVALUATE 进化   FeedbackAnalyst（离线：消费数据 → 评估报告 → 迭代建议）
 ```
@@ -40,7 +40,7 @@ cd src
 pip install -r requirements.txt
 export DEEPSEEK_API_KEY=<your key>   # 不配置也能跑（全链路规则兜底降级）
 
-python main.py seed          # 初始化：5 市场档案 + 28 篇 KB + 11 个 Prompt 模板
+python main.py seed          # 初始化：5 市场档案 + 28 篇 KB + 12 个 Prompt 模板
 python main.py serve         # http://localhost:8000/docs
 python main.py run JP        # 端到端跑一次日本市场供给
 python main.py simulate      # 模拟消费事件（反馈闭环演示）
@@ -51,7 +51,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 ## 关键设计文档
 
 - [docs/PRD.md](docs/PRD.md) — 产品定位、四段式架构、功能范围、设计原则
-- [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) — 11 个 Agent 的输入/输出/判断/降级规格
+- [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) — 12 个 Agent 的输入/输出/判断/降级规格
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — 数据模型、API、检索方案取舍
 
 ## PM 设计文档（M4 · `v2.5-pm-docs`）
@@ -64,6 +64,14 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - [docs/RUN_REPORT_v1.1.md](docs/RUN_REPORT_v1.1.md) — **真实运行报告（定稿版）**：M1 真实信号驱动、17 条真实运行，交出产出率 70.6% / FPY 0% / 单位有效成本 ¥0.50（含废稿摊销）/ 失败归因 / Rubric 五维，并记录一次扩样失败暴露的环境可靠性问题
   - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
   - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
+
+## 主题漂移防护（M5 · `v2.6`）
+
+> 08-06 实测出现"拼盘稿"（主线被电竞/百度/中超/歌手等无关新闻污染）。M5 用四层防护彻底解决：L0 检索层修复放宽逻辑 → L1 新增 TopicGuard 硬闸门（TCS 主题一致性分，零 token、语言无关）→ L2 引用约束反转（60% 以上引用须来自主干）→ L3 fallback 去拼盘（兜底稿固定 2 节只引主干）。
+
+- [docs/DRIFT_GUARD_DESIGN_v1.0.md](docs/DRIFT_GUARD_DESIGN_v1.0.md) — 主题漂移根因分析 + L0–L3 四层防护设计 + TCS 公式 + 已知局限
+- [docs/METRICS_FRAMEWORK_v1.0.md](docs/METRICS_FRAMEWORK_v1.0.md) §2.2.1 — 主题一致性（TCS）闸门指标口径与 SQL
+- 回归测试：[tools/test_drift_guard.py](tools/test_drift_guard.py)（15/15 通过）
 
 ## 技术栈与取舍
 
@@ -81,7 +89,7 @@ v2_trendforge/
 ├── docs/                  # PRD / Agent 设计 / 数据模型
 ├── src/
 │   ├── app/
-│   │   ├── agents/        # 11 个 Agent + base（RunContext/决策日志/降级/ev清洗）
+│   │   ├── agents/        # 12 个 Agent + base（RunContext/决策日志/降级/ev清洗）
 │   │   ├── workflow/      # 固定拓扑编排器（Editor 回退循环）
 │   │   ├── rag/           # BM25 + KB 灌库 + 检索
 │   │   ├── prompts/       # 模板文件化（templates/*.md）
