@@ -130,6 +130,33 @@ async def run_pipeline(market_code: str) -> dict:
             await ctx.persist()
             await session.commit()
             return {"task_id": task.id, "content_id": content.id}
+        except PipelineRejected as pr:
+            # 被总编/无证据否决：保留成稿用于审计与漂移评分（不发布）
+            try:
+                article = data.get("article", {})
+                content = Content(
+                    id=str(uuid.uuid4()), task_id=task.id, market=market.code,
+                    language=market.language, status="rejected",
+                    brief=data.get("brief"), title=article.get("title", "(无标题)"),
+                    summary=article.get("summary", ""),
+                    body=article.get("body"), evidences=data.get("evidences"),
+                    quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
+                             "topic_guard": data.get("topic_guard", {}),
+                             "evidence_guard": data.get("evidence_guard", {})},
+                    decision_log=ctx.decision_log, prompt_versions=ctx.prompt_versions,
+                    signals=data.get("signals", []),
+                    is_fallback=any(s.status == "degraded" for s in ctx.spans),
+                )
+                session.add(content)
+            except Exception:
+                pass
+            task.status = "rejected"
+            task.progress = "rejected"
+            task.error = str(pr)[:500]
+            task.finished_at = datetime.utcnow()
+            await ctx.persist()
+            await session.commit()
+            raise
         except Exception as e:
             task.status = "failed"
             task.progress = "failed"
