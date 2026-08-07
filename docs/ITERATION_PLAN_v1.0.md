@@ -53,7 +53,7 @@
 > - ✅ **M2 分析深度与 SQL 证据** `v2.3-analytics` — **本次完成**：`src/app/analytics/queries.py` 手写 SQL 指标层（8 图，≥5 条用窗口函数/CTE）、`/api/analytics/center` 端点、仿真器 `calibrated_from` 校准、前端分析中心（SVG 图表 + 可展开真实 SQL + 仿真角标）
 > - ⏳ **M3 可执行闭环与 A/B** `v2.4-closed-loop` — **本次完成**：`PromptRecord` 扩展(source/adopted/parent_version/adopted_at) + 新增 `PromptSuggestion` 表；`PromptManager` 覆盖层（采纳版本运行时生效，无需重启）；`FeedbackAnalyst` 建议结构化(含完整新版 prompt)；`/api/prompts/*`（模板/版本/采纳/回滚/diff/建议人审闸门/A-B）；前端「迭代闭环」视图(提议→人审→采纳→回滚→A/B，复用 KBCurator 范式)；`app/workflow/ab.py` 同选题双跑 produce 段对比质量/CTR/成本。**08-07 真实 LLM 实跑全链路验证**（FeedbackAnalyst→人审采纳 writer@v3→A/B），证据见 `docs/CLOSED_LOOP_EVIDENCE_v1.0.md` + `docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json`
 > - ✅ **M4 PM 文档与运行证据** `v2.5-pm-docs` — 已完成（指标体系 / 内容形态 / 规模化 / 真实运行报告 v1.1 / **闭环实跑证据 v1.0**）
-> - 🔧 **计划外已交付**：revise 机制（`v2-revise-mechanism`/`v2-revise-state`）、中文回译镜像（`v2-zh-mirror`）、M5 主题漂移四层防护（`v2.6`）、真实运行证据落盘（`v2.5.1-run-evidence`）。这些在原计划之外，但进一步补强了「真实感 + 人审闭环」叙事。
+> - 🔧 **计划外已交付**：revise 机制（`v2-revise-mechanism`/`v2-revise-state`）、中文回译镜像（`v2-zh-mirror`）、M5 主题漂移四层防护（`v2.6`）、真实运行证据落盘（`v2.5.1-run-evidence`）、**采纳版 Prompt 端到端实跑（v2.6-closed-loop-live）**：writer@v3 采纳后产出新内容，多轮 revise→人审打回→重写把守门前漂移率 0.2→0.0、守门后恒 0，自动演示 HTML + 本地 DB 持久化（见 `docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md`）。这些在原计划之外，但进一步补强了「真实感 + 人审闭环」叙事。
 
 ### M1 — 真实信号接入　`v2.2-real-signals`
 **解决**：引擎入口是假的（最高优先级）

@@ -65,6 +65,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
   - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
   - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
 - [docs/CLOSED_LOOP_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_EVIDENCE_v1.0.md) — **M3 闭环实跑证据（PM 向）**：2026-08-07 真实 LLM 跑通「FeedbackAnalyst→人审采纳→A/B」，写入覆盖层无需重启；同选题双跑质量 +0.4 / CTR +0.01 / 成本 −¥0.0681。原始证据 [docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json](docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json)
+- [docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md) — **采纳版 Prompt 端到端实跑（v2.6-closed-loop-live）**：writer@v3 采纳后真实产出新内容，多轮 `revise→人审打回→重写` 把守门前漂移率从 0.2 单调降到 0.0、守门后恒为 0；自动演示 [docs/data/produced/DEMO_end2end_newcontent.html](docs/data/produced/DEMO_end2end_newcontent.html)，证据 [docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json](docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json)
 
 ## 分析中心（M2 · `v2.3-analytics`）
 

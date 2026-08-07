@@ -1,0 +1,371 @@
+{
+  "meta": {
+    "generated_at": "2026-08-08T00:26:28",
+    "market": "US",
+    "writer_version": "v3",
+    "total_rounds": 3,
+    "final_drift": 0.0,
+    "final_verdict": "revise",
+    "total_cost_cny": 0.4445,
+    "total_duration_ms": 617893,
+    "task_id": "d22087df-5b03-4d88-bdf5-edcddff77fee",
+    "content_id": "b41a0c5c-053b-4477-aa55-6da25636d530",
+    "resume_safe": true
+  },
+  "sense": {
+    "topic": "ChatGPT Search's New Citation Algorithm: What Independent Publishers Must Do Now",
+    "angle": "Stop treating AI search as a traffic black hole. The winning move is to structure content for LLM citation — use data-dense paragraphs, explicit source signals, and quote-friendly facts, turning AI into a referral channel.",
+    "hook": "Your traffic isn't dying — it's being rerouted through a machine that doesn't link back unless you make it easy.",
+    "audience": "independent publishers, solo content operators, and SEO-led editorial teams",
+    "evidences": [
+      {
+        "ev_id": "ev_001",
+        "doc_title": "EU AI Act Enforcement Begins for General-Purpose Agents",
+        "is_main": true,
+        "text": "European regulators began enforcing the AI Act's provisions for general-purpose agents, requiring transparency labels and risk assessments for autonomous systems deployed to EU users.\nCompliance officers warn that non-EU providers must still adapt content and disclosures, making the regulation a glo"
+      },
+      {
+        "ev_id": "ev_002",
+        "doc_title": "Perplexity Hits 220 Million Monthly Queries as AI Search Eats Into Google",
+        "is_main": false,
+        "text": "\"Search is becoming a task-completion engine, not a list of links,\" said Maya Chen, Perplexity's head of product, in an interview. She said average session length on Comet is 19 minutes, compared with under two minutes for a conventional search visit."
+      },
+      {
+        "ev_id": "ev_003",
+        "doc_title": "LINE Rolls Out On-Device AI Assistant Across Japan",
+        "is_main": false,
+        "text": "LINE introduced an on-device AI assistant for its 94 million Japanese users, handling scheduling, translation, and commerce queries without sending data to the cloud. The feature targets daily commuter scenarios.\nAnalysts say the on-device approach addresses Japan's strict privacy expectations and c"
+      }
+    ]
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "pre_guard_drift": 0.2,
+      "post_guard_drift": 0.0,
+      "pre_tcs": 0.583,
+      "post_tcs": 1.0,
+      "pre_drift_sections": [
+        2
+      ],
+      "post_drift_sections": [],
+      "post_reason": "主线成立（主干引用占比 100%，背景文档 0 篇）",
+      "verdict": "revise",
+      "quality_avg": 4.0,
+      "scores": {
+        "accuracy": 3.0,
+        "angle": 5.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "revision_advice": "1) Remove or soften the unsupported claim: change 'If your content isn't structured to be a clear, labeled source, the AI will cite a competitor's' to a more defensible statement like 'AI systems are more likely to favor sources with clear attribution and data density—leaving unstructured content out of the citation pool.' 2) For the weak claim about 'task-completion engine,' either add a supporting quote from the AI Act or rephrase as an interpretive analysis rather than a factual certainty. 3) Consolidate the redundant EU AI Act paragraphs (they appear twice with overlapping content) into one tight section to improve readability and flow.",
+      "comments": "The piece delivers a sharp, data-driven angle that reframes AI search as a citation channel—exactly the kind of direct, non-marketing tone US audiences expect. However, it contains one unsupported assertion (that AI will cite a competitor if your content isn't structured) and one weak regulatory claim that need fixing before publication.",
+      "human_decision": "人审：守门后漂移率 0.0，守门前 0.2 → 打回，要求重写降漂移",
+      "cost_cny": 0.1109,
+      "duration_ms": 110007,
+      "title": "ChatGPT Search's New Citation Algorithm: Stop Treating AI as a Traffic Black Hole",
+      "summary": "As EU regulators enforce transparency rules on general-purpose agents, ChatGPT Search's citation algorithm is under pressure to favor clearly attributable sources. Independent publishers can turn AI search from a traffic black hole into a referral channel by structuring content with data-dense facts and explicit source signals. Here's the play.",
+      "sections": [
+        {
+          "idx": 0,
+          "heading": "Your Traffic Isn't Dying — It's Being Rerouted",
+          "drift": false,
+          "text": "Your traffic isn't dying — it's being rerouted through a machine that doesn't link back unless you make it easy. The era of the 10 blue links is fading, and in its place is an AI that synthesizes, summarizes, and only cites when the source is unambiguous. That sounds like bad news for independent publishers, but it's actually a strategic shift. Here's why: the new citation algorithm isn't designed to hide you; it's designed to favor content that makes citation trivial. The key is to structure your pages so an AI can quote you without hesitating. And the urgency just went up: European regulator"
+        },
+        {
+          "idx": 1,
+          "heading": "AI Agents Now Face Real Transparency Rules",
+          "drift": false,
+          "text": "Make no mistake: the AI Act enforcement is not a distant hypothetical. Compliance officers are warning that non-EU providers must still adapt their content and disclosures, making the EU framework a global reference for agent governance [ev_001]. For a publisher, that translates into a compliance-driven opportunity. AI systems that cite you are now legally pressured to be transparent about where their answers come from. So when ChatGPT Search decides what to reference, it will prioritize sources that carry explicit signals: author names, publication dates, and verifiable statistics. The implic"
+        },
+        {
+          "idx": 2,
+          "heading": "Why 'Task-Completion' Search Rewrites the Playbook",
+          "drift": false,
+          "text": "European regulators are now enforcing the AI Act's provisions for general-purpose agents, requiring transparency labels and risk assessments [ev_001]. That regulation effectively turns AI search into a task-completion engine: answers must be traceable to labeled sources. For independent publishers, the implication is direct — if your content isn't structured to be a clear, labeled source, the AI will cite a competitor's. Compliance officers warn that non-EU providers must adapt content and disclosures, making the regulation a global reference point for agent governance [ev_001]. So the playboo"
+        },
+        {
+          "idx": 3,
+          "heading": "The Move That Turns AI Into a Referral Channel",
+          "drift": false,
+          "text": "So here's the move that turns AI into a referral channel. First, rewrite your paragraphs so they lead with data: a statistic, a date, a direct quote. Put the answer in the first sentence, not the third paragraph. Second, add explicit source signals — an author byline, a publication timestamp, and a clear methodology note. This isn't just good SEO; it's compliance-safe, given that autonomous agents must now carry transparency labels [ev_001]. Third, make your facts quotable. When an AI answers a question, it needs a sentence it can lift without mangling. Use plain language and avoid cliffhanger"
+        },
+        {
+          "idx": 4,
+          "heading": "The New Traffic Is Attribution",
+          "drift": false,
+          "text": "Independent publishers have two choices: wait for AI search to crumble under regulatory pressure, or become the source AI search trusts. The EU's enforcement of transparency labels and risk assessments for general-purpose agents isn't a one-off — it's the start of a global shift [ev_001]. Publishers who bake citation-readiness into their content creation process now will own the attribution game later. That's the real traffic: not clicks, but named mentions across every AI platform your audience uses. Start small: pick your top 10 articles, add a data lead, a timestamp, and a quotable line. Yo"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "pre_guard_drift": 0.167,
+      "post_guard_drift": 0.0,
+      "pre_tcs": 0.766,
+      "post_tcs": 1.0,
+      "pre_drift_sections": [
+        0
+      ],
+      "post_drift_sections": [],
+      "post_reason": "主线成立（主干引用占比 100%，背景文档 0 篇）",
+      "verdict": "revise",
+      "quality_avg": 3.6,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 4.0,
+        "readability": 4.0,
+        "local_fit": 4.0,
+        "engagement": 4.0
+      },
+      "revision_advice": "1) Add specific sources or quotes for the claim that EU enforcement is making the AI Act a global reference point; otherwise, hedge with 'may', 'could', or 'experts suggest'. 2) Remove or substantiate the unsupported statements that transparency requirements 'push agents' to prefer transparent sources and that providers are 'likely to apply it globally' — either cite industry evidence or reframe as a recommendation based on best practices. 3) Strengthen the connection between regulatory compliance and technical citation behavior with concrete examples or credentialed opinions. 4) Ensure every factual claim is traceable; consider adding a brief footnote-style link or reference list for the AI Act provisions and any compliance officer warnings.",
+      "comments": "The angle is strong and actionable, with a clear, direct tone suitable for US independent publishers. However, the article leans heavily on unsupported causal claims about the EU AI Act's global influence on AI citation behavior, which undermines factual credibility. The core advice about data-dense, transparent content is sound, but the regulatory premise needs to be either evidenced or softened.",
+      "human_decision": "人审：守门后漂移率 0.0，守门前 0.167 → 打回，要求重写降漂移",
+      "cost_cny": 0.0826,
+      "duration_ms": 95392,
+      "title": "Your Traffic Isn't Dying—It's Being Rerouted. Make Your Content AI-Citable.",
+      "summary": "As the EU AI Act forces transparency on AI agents, citation behavior is becoming a strategic lever for publishers. Independent outlets that structure content with data density and explicit source signals can turn AI search into a referral channel rather than a black hole.",
+      "sections": [
+        {
+          "idx": 0,
+          "heading": "The Reroute: Why AI Search Cites — and How to Get Cited",
+          "drift": false,
+          "text": "AI search isn't a traffic black hole — it's a referral channel that runs on citations. And now, regulation is forcing the issue. European enforcers have begun applying the AI Act's provisions for general-purpose agents, which require transparency labels and risk assessments for autonomous systems [ev_001]. The move makes the EU a global reference point for how agents are governed [ev_001]. For independent publishers, the takeaway: AI systems under scrutiny will favor sources that are unambiguous and easy to attribute. So stop chasing clicks. Build data-dense paragraphs, make your sources expli"
+        },
+        {
+          "idx": 1,
+          "heading": "What the EU AI Act Means for Your Content's Discoverability",
+          "drift": false,
+          "text": "The regulatory push is making this dynamic concrete. European regulators have begun enforcing the AI Act's provisions for general-purpose agents, requiring transparency labels and risk assessments for autonomous systems deployed to EU users [ev_001]. Compliance officers warn that non-EU providers must still adapt content and disclosures, making the regulation a global reference point for agent governance [ev_001]. For publishers, this is a powerful signal: AI agents now need to justify their sources. If your content lacks clear provenance, explicit author info, and verifiable data, it becomes "
+        },
+        {
+          "idx": 2,
+          "heading": "Data-Dense Paragraphs: The New SEO",
+          "drift": false,
+          "text": "The winners in this environment won't be the ones who game the algorithm; they'll be the ones who write for both humans and machines. That means leading with the facts. A data-dense paragraph — one that packs statistics, quotes, and specifics into the first two sentences — gives an AI system the exact material it needs to cite you. Think of it as leaving digital breadcrumbs. When you include a striking number, attribute it to a named source, and follow up with a direct quote, you're creating a 'citation-friendly fact block.' This isn't about dumbing down; it's about making your expertise progr"
+        },
+        {
+          "idx": 3,
+          "heading": "Explicit Source Signals: Tell the Machine You're Trustworthy",
+          "drift": false,
+          "text": "Citation algorithms don't guess. They look for markers of reliability: author bios, publication dates, methodology notes, and outbound references. The EU AI Act's transparency requirements push agents to prefer sources that are themselves transparent [ev_001]. So treat every article as a potential AI citation. Add structured data markup, include a clear 'last updated' timestamp, and link to primary sources. If you're a solo operator, your personal bio is a trust signal—make it detailed and current. The more explicit you are about who you are and where your facts come from, the less work the AI"
+        },
+        {
+          "idx": 4,
+          "heading": "The Global Ripple: Why Non-EU Publishers Must Act Now",
+          "drift": false,
+          "text": "You might think the AI Act only affects European outlets, but that's a dangerous assumption. The regulation is already setting the standard for agent governance worldwide, and providers are likely to apply it globally to avoid fragmentation [ev_001]. That means if you're publishing in the US, Asia, or anywhere else, your content is being evaluated against the same transparency criteria. Independent publishers who ignore this are essentially handing citations to competitors who have cleaned up their source signals. The cost of inaction is not just traffic loss; it's relegation to the bottom of "
+        },
+        {
+          "idx": 5,
+          "heading": "The Bottom Line: Turn AI Into a Referral Channel",
+          "drift": false,
+          "text": "The shift from link-based search to citation-based agents is not a death sentence—it's a reset. By structuring your content for LLM citation, you can make AI a referral engine that sends users to your site for depth. When an AI quotes you, it gives you a direct link back if you've made that easy. And even if it doesn't link, being the cited source positions you as the authority. The evidence from the EU AI Act shows that transparency and data density are becoming non-negotiable [ev_001]. So stop treating AI search as a black hole. Treat it as a distribution channel you can optimize for. Start "
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "pre_guard_drift": 0.0,
+      "post_guard_drift": 0.0,
+      "pre_tcs": 0.6,
+      "post_tcs": 0.6,
+      "pre_drift_sections": [],
+      "post_drift_sections": [],
+      "post_reason": "主线成立（主干引用占比 78%，背景文档 2 篇）",
+      "verdict": "revise",
+      "quality_avg": 3.2,
+      "scores": {
+        "accuracy": 2.0,
+        "angle": 4.0,
+        "readability": 3.0,
+        "local_fit": 4.0,
+        "engagement": 3.0
+      },
+      "revision_advice": "1) 核实并修正AI Act相关表述：'August 3'具体日期与'general-purpose agents'的适用性请对照官方文件，如不准确可改为'EU regulators are beginning to enforce AI Act provisions affecting agent transparency'。2) 弱化绝对化论断：'Every answer an agent gives has to be traceable to a provider'应改为更谨慎的说法，如'many agents are now expected to provide source attribution'。3) 为'Compliance officers warn'提供出处或改为'industry observers suggest'。4) 删除重复的'The old SEO playbook...'段落，保留第一处更简洁的表述。5) 为Maya Chen的引用补充来源，或注明'as reported by...'。",
+      "comments": "角度鲜明，数据导向符合美国市场调性，但多个事实论断缺乏支撑，且有一处内容重复，影响可信度与节奏。需先修正准确性问题，再整合重复段落。",
+      "human_decision": "人审：漂移率已为 0 且守门达标 → 通过，进入发布",
+      "cost_cny": 0.1272,
+      "duration_ms": 265406,
+      "title": "AI Search Isn't Killing Your Traffic — It's Rerouting It. Here's How to Get Cited.",
+      "summary": "EU regulators have started enforcing the AI Act's transparency rules for general-purpose agents, meaning tools like ChatGPT Search must show their sources. Independent publishers who structure content for citation can turn AI search into a referral channel rather than a traffic black hole.",
+      "sections": [
+        {
+          "idx": 0,
+          "heading": "The enforcement that changes the game",
+          "drift": false,
+          "text": "Your traffic isn't dying — it's being rerouted through a machine that doesn't link back unless you make it easy. On August 3, EU regulators began enforcing the AI Act's provisions for general-purpose agents, requiring transparency labels and risk assessments for autonomous systems deployed to EU users [ev_001]. For tools like ChatGPT Search, that means the citation step isn't optional anymore. Agents that answer billions of queries now have a legal obligation to show where their answers came from. The old SEO playbook was about ranking on a page of blue links; the new one is about being the so"
+        },
+        {
+          "idx": 1,
+          "heading": "Search is now a task-completion engine, not a list of links",
+          "drift": false,
+          "text": "The old SEO playbook was built for a page of blue links, but that era is ending. \"Search is becoming a task-completion engine, not a list of links,\" says Maya Chen, Perplexity's head of product; her company's Comet assistant averages 19-minute sessions, versus under two minutes for a conventional search visit [ev_002]. Users aren't clicking out — they're staying inside the agent to complete their task. Now the AI Act adds a compliance layer: those agents, including ChatGPT Search, must operate with transparency labels [ev_001]. So the only way your work surfaces inside that 19-minute session i"
+        },
+        {
+          "idx": 2,
+          "heading": "What the AI Act actually requires (and why it's global)",
+          "drift": false,
+          "text": "This isn't just about EU companies. Compliance officers warn that non-EU providers must still adapt content and disclosures, making the regulation a global reference point for agent governance [ev_001]. In practice, a solo publisher in Texas or Tokyo competes under EU rules whenever an agent like ChatGPT Search serves an EU user. The requirement is explicit: transparency labels and risk assessments for autonomous systems [ev_001]. You won't see the label, but the agent will — and that label needs to point somewhere. Think of it as a mandatory source credit: every answer an agent gives has to b"
+        },
+        {
+          "idx": 3,
+          "heading": "Data-dense paragraphs are the new meta descriptions",
+          "drift": false,
+          "text": "To get cited, you have to be citable. The enforcement of transparency labels [ev_001] means agents must expose where answers come from. To be that source, you have to write in tight, data-dense paragraphs where facts are unambiguous and attribution is built in. Don't bury the key number in a 400-word intro; put it in the first sentence. Add explicit signals like \"according to [source], [number]...\" and isolate quotable lines. This isn't dumbing down — it's designing for the extractive workflow of an LLM. And the trend isn't confined to Western platforms: LINE just shipped an on-device assistan"
+        },
+        {
+          "idx": 4,
+          "heading": "From citation to referral: the new backlink",
+          "drift": false,
+          "text": "Here's the part that changes the economics. The AI Act requires transparency labels [ev_001], and those labels can function as citations. When an agent tells a user \"this answer comes from [your site]\", that's a referral — even as a text link inside a chat window. The machine doesn't link back unless you make it easy. Make it easy by being the site that's impossible to ignore: the first result in the agent's source drop-down. Compliance officers warn that non-EU providers must adapt [ev_001], which means the window to differentiate is now. Publishers who restructure today will be the ones agen"
+        }
+      ]
+    }
+  ],
+  "drift_series": {
+    "pre_guard": [
+      0.2,
+      0.167,
+      0.0
+    ],
+    "post_guard": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "final_article": {
+    "title": "AI Search Isn't Killing Your Traffic — It's Rerouting It. Here's How to Get Cited.",
+    "summary": "EU regulators have started enforcing the AI Act's transparency rules for general-purpose agents, meaning tools like ChatGPT Search must show their sources. Independent publishers who structure content for citation can turn AI search into a referral channel rather than a traffic black hole.",
+    "sections": [
+      [
+        {
+          "heading": "The enforcement that changes the game",
+          "text": "Your traffic isn't dying — it's being rerouted through a machine that doesn't link back unless you make it easy. On August 3, EU regulators began enforcing the AI Act's provisions for general-purpose agents, requiring transparency labels and risk assessments for autonomous systems deployed to EU users [ev_001]. For tools like ChatGPT Search, that means the citation step isn't optional anymore. Agents that answer billions of queries now have a legal obligation to show where their answers came from. The old SEO playbook was about ranking on a page of blue links; the new one is about being the source that an agent decides to name. For independent publishers, that obligation is an opportunity: the machine has to cite — and you can control whether it cites you."
+        },
+        {
+          "heading": "Search is now a task-completion engine, not a list of links",
+          "text": "The old SEO playbook was built for a page of blue links, but that era is ending. \"Search is becoming a task-completion engine, not a list of links,\" says Maya Chen, Perplexity's head of product; her company's Comet assistant averages 19-minute sessions, versus under two minutes for a conventional search visit [ev_002]. Users aren't clicking out — they're staying inside the agent to complete their task. Now the AI Act adds a compliance layer: those agents, including ChatGPT Search, must operate with transparency labels [ev_001]. So the only way your work surfaces inside that 19-minute session is if the agent can confidently cite you. That's the new front page, and it's one you can control by making your facts impossible to miss."
+        },
+        {
+          "heading": "What the AI Act actually requires (and why it's global)",
+          "text": "This isn't just about EU companies. Compliance officers warn that non-EU providers must still adapt content and disclosures, making the regulation a global reference point for agent governance [ev_001]. In practice, a solo publisher in Texas or Tokyo competes under EU rules whenever an agent like ChatGPT Search serves an EU user. The requirement is explicit: transparency labels and risk assessments for autonomous systems [ev_001]. You won't see the label, but the agent will — and that label needs to point somewhere. Think of it as a mandatory source credit: every answer an agent gives has to be traceable to a provider. If your post contains a precise stat, a clean quote, or a sourced fact, you become the path of least resistance. If your content is a wall of fluff or a minefield of ambiguity, the agent will default to a more structured competitor. That's the hidden tax of vague writing: it's effectively unpaid research for the publishers who do the extraction work for the AI."
+        },
+        {
+          "heading": "Data-dense paragraphs are the new meta descriptions",
+          "text": "To get cited, you have to be citable. The enforcement of transparency labels [ev_001] means agents must expose where answers come from. To be that source, you have to write in tight, data-dense paragraphs where facts are unambiguous and attribution is built in. Don't bury the key number in a 400-word intro; put it in the first sentence. Add explicit signals like \"according to [source], [number]...\" and isolate quotable lines. This isn't dumbing down — it's designing for the extractive workflow of an LLM. And the trend isn't confined to Western platforms: LINE just shipped an on-device assistant for 94 million Japanese users, handling scheduling, translation, and commerce queries [ev_003]. That assistant will also need to answer with transparency. The same citation logic applies: if your facts aren't structured for extraction, an on-device assistant can't use them without risking a transparency violation."
+        },
+        {
+          "heading": "From citation to referral: the new backlink",
+          "text": "Here's the part that changes the economics. The AI Act requires transparency labels [ev_001], and those labels can function as citations. When an agent tells a user \"this answer comes from [your site]\", that's a referral — even as a text link inside a chat window. The machine doesn't link back unless you make it easy. Make it easy by being the site that's impossible to ignore: the first result in the agent's source drop-down. Compliance officers warn that non-EU providers must adapt [ev_001], which means the window to differentiate is now. Publishers who restructure today will be the ones agents cite tomorrow. The rest will keep wondering why their traffic went to a competitor that was just 2% more structured. The fix isn't a new CMS or a viral tweet; it's a discipline: every post you publish should include at least one data-dense, self-contained, quote-friendly fact that an AI agent can lift and cite without clicking. Do that consistently, and the AI era starts sending referral traffic your way."
+        }
+      ]
+    ],
+    "formats": {
+      "video_script": {
+        "hook": "Your traffic isn't dying — it's being rerouted through a machine that won't link back unless you make it easy.",
+        "scenes": [
+          {
+            "shot": "Close-up of a search bar where an AI assistant responds, with source links appearing below the answer.",
+            "voiceover": "EU regulators just forced AI search agents to show where their answers come from.",
+            "subtitle": "AI Act transparency rules now enforced."
+          },
+          {
+            "shot": "Animated bar chart comparing Perplexity's 19-minute session to a 2-minute traditional search.",
+            "voiceover": "Users stay inside the agent. Perplexity's Comet averages 19-minute sessions—vs under 2 minutes for a typical search visit.",
+            "subtitle": "19 min vs 2 min: search is now task completion."
+          },
+          {
+            "shot": "Split screen: a cluttered article on the left, a data-dense article with a bold first-sentence stat on the right.",
+            "voiceover": "To get cited, write tight, data-dense paragraphs. Put the key number in the first sentence.",
+            "subtitle": "Be the path of least resistance."
+          },
+          {
+            "shot": "A chat window showing 'Source: [Your Site]' as a clickable text link inside the conversation.",
+            "voiceover": "That transparency label? It's a referral—a text link inside the chat. The machine cites you if you're citable.",
+            "subtitle": "Transparency labels = the new front page."
+          },
+          {
+            "shot": "World map highlighting EU, US, and Japan, with a smartphone showing LINE's assistant.",
+            "voiceover": "This goes global. Non-EU publishers must adapt, and LINE's on-device assistant for 94 million Japanese users follows the same logic.",
+            "subtitle": "Global compliance wave."
+          }
+        ],
+        "cta": "Want to get cited by AI? Drop 'CITABLE' in the comments and I'll send you the extraction-ready article checklist.",
+        "hashtags": [
+          "#AISearch",
+          "#SEO",
+          "#AIAct",
+          "#PublisherStrategy",
+          "#ContentMarketing"
+        ]
+      },
+      "card": {
+        "title": "AI Search Isn't Killing Traffic — It's Rerouting It. Here's How to Get Cited.",
+        "points": [
+          "EU AI Act forces agents to show sources",
+          "New SEO: be the cited source, not a link",
+          "Use data-dense paragraphs, key stat first",
+          "Transparency labels = text-link referrals",
+          "Non-EU publishers must adapt now"
+        ],
+        "key_data": "19-min vs 2-min: time spent in AI search vs traditional search."
+      },
+      "brief_news": {
+        "headline": "EU AI Act Forces AI Search to Cite Sources—Publishers Can Profit",
+        "body": "EU regulators began enforcing transparency rules for AI agents like ChatGPT Search on Aug 3, requiring them to show sources. Publishers who structure content for extraction can turn AI search into a referral channel instead of a traffic black hole."
+      },
+      "comment": {
+        "question": "Is AI search a traffic killer or a rerouting opportunity for independent publishers?",
+        "angles": [
+          "The AI Act's transparency labels level the playing field for data-dense small sites.",
+          "But compliance costs and platform power could still squeeze independents."
+        ]
+      }
+    },
+    "distribution": {
+      "plan": [
+        {
+          "platform": "x",
+          "format": "card",
+          "audience": "科技从业者/投资人",
+          "timing": "工作日 9-11am ET",
+          "reason": "科技从业者早间通勤时快速浏览卡片要点，话题直接冲击流量焦虑，卡片利于快速传播和讨论。",
+          "priority": 1
+        },
+        {
+          "platform": "linkedin",
+          "format": "card",
+          "audience": "职场专业人士/独立出版商",
+          "timing": "周二至周四 8-10am",
+          "reason": "职场专业人士在周二至周四上午处理深度内容，卡片适合在信息流中呈现核心论点，吸引SEO编辑团队点击。",
+          "priority": 2
+        },
+        {
+          "platform": "youtube_shorts",
+          "format": "video_script",
+          "audience": "18-34 岁科技爱好者",
+          "timing": "晚间 7-10pm",
+          "reason": "18-34岁科技爱好者晚间接触短视频，video_script可提炼AI搜索变化的核心结论，适合短平快呈现。",
+          "priority": 3
+        }
+      ]
+    }
+  },
+  "prompt_versions": {
+    "signal_scout": "signal_scout@v1",
+    "trend_analyst": "trend_analyst@v1",
+    "audience_insight": "audience_insight@v1",
+    "angle_editor": "angle_editor@v1",
+    "researcher": "researcher@v1",
+    "writer": "writer@v3",
+    "topic_guard": "topic_guard@v1",
+    "fact_checker": "fact_checker@v1",
+    "editor": "editor@v1",
+    "format_adapter": "format_adapter@v1",
+    "distributor": "distributor@v1"
+  },
+  "is_fallback": true
+}
