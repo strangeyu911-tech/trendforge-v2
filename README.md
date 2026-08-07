@@ -73,6 +73,17 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - 前端：控制台「分析中心」视图（`ui/console/`，纯 SVG 无第三方库）
 - 校准：仿真器参数由 `contents.signals`（HN/Dev.to points/comments）拟合，详见 `src/app/simulator.py`
 
+## 可执行闭环与 A/B（M3 · `v2.4-closed-loop`）
+
+> 闭环只到「建议」为止是假闭环。M3 把「AI 提议」接上「人审闸门 + 一键采纳 + 可回滚 + A/B 验证」，**人始终是标准的定义者，但决策成本从「自己重写 Prompt」降到「点一下采纳」**。该模式先在 KB 治理（KBCurator）验证，直接复用到 Prompt 上，叙事自洽。
+
+- 数据层：`PromptRecord` 扩展 `source`(file/human/ai_suggested) / `adopted` / `parent_version` / `adopted_at`；新增 `PromptSuggestion` 表（AI 建议 + 完整新版 Prompt，待人审）
+- 运行时覆盖层：`PromptManager` 增加 in-memory override，DB 中 `adopted=True` 的版本自动覆盖文件模板生效；`seed_all` 启动时同步 → **采纳后下一轮运行即用新版本，无需重启**
+- `FeedbackAnalyst` 建议结构化：`{target_template, section, proposed_change, rationale, expected_metric, new_prompt}`，LLM 直接产出可被一键采纳的完整新版 Prompt
+- 人审闸门 API（`src/app/api/routers/prompts.py`）：`POST /prompts/suggestions/{id}/adopt` 采纳生成新版本、`/versions/{id}/adopt` 回滚、版本 `diff`
+- 极简 A/B（`src/app/workflow/ab.py`）：同一选题用两版 Prompt 各跑一次 produce 段 → 仿真 → 对比质量分 / CTR / 成本；顺带交付「同选题多版本改写」
+- 前端：控制台「迭代闭环」视图（提议 → 人审 → 采纳 → 回滚 → A/B，复用 KBCurator 人审闸门 UI）
+
 ## 主题漂移防护（M5 · `v2.6`）
 
 > 08-06 实测出现"拼盘稿"（主线被电竞/百度/中超/歌手等无关新闻污染）。M5 用四层防护彻底解决：L0 检索层修复放宽逻辑 → L1 新增 TopicGuard 硬闸门（TCS 主题一致性分，零 token、语言无关）→ L2 引用约束反转（60% 以上引用须来自主干）→ L3 fallback 去拼盘（兜底稿固定 2 节只引主干）。
