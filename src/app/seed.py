@@ -9,6 +9,7 @@ from app.config import DATA_DIR
 from app.models import Market, PromptRecord, SessionLocal, init_db
 from app.prompts.manager import TPL_DIR
 from app.rag.store import ingest_kb
+from app.services.prompt_versions import refresh_overrides
 
 
 async def seed_all() -> dict:
@@ -35,4 +36,7 @@ async def seed_all() -> dict:
                                          content=tpl.read_text(encoding="utf-8")))
                 added_p += 1
         await session.commit()
-    return {"markets_added": added_m, "kb_docs_added": added_kb, "prompts_added": added_p}
+        # M3：把 DB 中已采纳的 Prompt 版本同步为运行时覆盖层（部署后无需重启即生效）
+        overrides = await refresh_overrides(session)
+    return {"markets_added": added_m, "kb_docs_added": added_kb,
+            "prompts_added": added_p, "prompt_overrides_active": overrides}

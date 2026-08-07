@@ -220,6 +220,29 @@ async def migrate_db() -> None:
         await conn.execute(text(
             "UPDATE contents SET signals = '[]' WHERE signals IS NULL"))
 
+        # prompts：M3 闭环版本治理扩展列
+        res = await conn.execute(text("PRAGMA table_info(prompts)"))
+        pcols = {row[1] for row in res}
+        p_alters = [
+            ("source", "ALTER TABLE prompts ADD COLUMN source VARCHAR(24) DEFAULT 'file'"),
+            ("adopted", "ALTER TABLE prompts ADD COLUMN adopted BOOLEAN DEFAULT 0"),
+            ("parent_version", "ALTER TABLE prompts ADD COLUMN parent_version VARCHAR(16) DEFAULT ''"),
+            ("adopted_at", "ALTER TABLE prompts ADD COLUMN adopted_at TIMESTAMP"),
+        ]
+        for col, ddl in p_alters:
+            if col not in pcols:
+                await conn.execute(text(ddl))
+        await conn.execute(text(
+            "UPDATE prompts SET source = 'file' WHERE source IS NULL OR source = ''"))
+
+        # prompt_suggestions 表（全新，create_all 会建；此处仅兼容已存在旧库的列补齐，通常无需）
+        await conn.execute(text(
+            "CREATE TABLE IF NOT EXISTS prompt_suggestions ("
+            "id VARCHAR(36) PRIMARY KEY, target_template VARCHAR(64), section VARCHAR(64), "
+            "proposed_change TEXT, rationale TEXT, expected_metric VARCHAR(64), new_prompt TEXT, "
+            "source VARCHAR(24) DEFAULT 'ai_generated', status VARCHAR(16) DEFAULT 'pending', "
+            "market VARCHAR(8), created_at TIMESTAMP)"))
+
 
 async def init_db() -> None:
     async with engine.begin() as conn:
@@ -228,11 +251,37 @@ async def init_db() -> None:
 
 
 class PromptRecord(Base):
+    """Prompt 版本库：每个模板(name)可有多个版本，adopted=True 的版本覆盖文件模板生效。
+
+    M3 闭环：FeedbackAnalyst 提议 → 人审采纳 → 生成新版本(adopted) → 下一轮运行即用新版本；
+    旧版本保留可 diff / 回滚（rollback = 重新采纳某一历史版本）。
+    """
     __tablename__ = "prompts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(64), index=True)
-    version: Mapped[str] = mapped_column(String(16), default="v1")
-    content: Mapped[str] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(16), default="production")
+    name: Mapped[str] = mapped_column(String(64), index=True)            # 模板名（= prompts/templates/<name>.md）
+    version: Mapped[str] = mapped_column(String(16), default="v1")        # v1/v2/... 同模板内自增
+    content: Mapped[str] = mapped_column(Text)                            # 完整 prompt（含 ---system---/---user--- 分隔）
+    status: Mapped[str] = mapped_column(String(16), default="production")  # production/draft/deprecated
+    source: Mapped[str] = mapped_column(String(24), default="file")       # file/human/ai_suggested
+    adopted: Mapped[bool] = mapped_column(default=False)                  # 是否当前生效版本（覆盖文件）
+    parent_version: Mapped[str] = mapped_column(String(16), default="")   # 派生自哪个版本
+    adopted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class PromptSuggestion(Base):
+    """FeedbackAnalyst 产出的结构化迭代建议（AI 提议，待人审闸门）"""
+    __tablename__ = "prompt_suggestions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    target_template: Mapped[str] = mapped_column(String(64), index=True)  # 建议改哪个 prompt 模板
+    section: Mapped[str] = mapped_column(String(64), default="")          # 针对模板的哪一段
+    proposed_change: Mapped[str] = mapped_column(Text, default="")         # 具体改法
+    rationale: Mapped[str] = mapped_column(Text, default="")              # 为什么这样改
+    expected_metric: Mapped[str] = mapped_column(String(64), default="")  # 预期改善的指标
+    new_prompt: Mapped[str] = mapped_column(Text, default="")             # 完整新版 prompt（含分隔符）
+    source: Mapped[str] = mapped_column(String(24), default="ai_generated")
+    status: Mapped[str] = mapped_column(String(16), default="pending")    # pending/adopted/rejected
+    market: Mapped[str] = mapped_column(String(8), default="")
     created_at: Mapped[datetime] = mapped_column(default=_now)

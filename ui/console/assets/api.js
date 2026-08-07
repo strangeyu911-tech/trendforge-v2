@@ -41,4 +41,15 @@ const API = {
   kbApprove: (id) => req(`/kb/patches/${id}/approve`, { method: 'POST' }),
   kbReject: (id) => req(`/kb/patches/${id}/reject`, { method: 'POST' }),
   prompts: () => req('/prompts'),
+  // M3 闭环
+  promptTemplates: () => req('/prompts/templates'),
+  promptVersions: (template = '') => req(`/prompts/versions${template ? '?template=' + encodeURIComponent(template) : ''}`),
+  promptVersionCreate: (body) => req('/prompts/versions', { method: 'POST', body: JSON.stringify(body) }),
+  promptVersionAdopt: (id) => req(`/prompts/versions/${id}/adopt`, { method: 'POST' }),
+  promptVersionDiff: (a, b) => req(`/prompts/versions/${a}/diff/${b}`),
+  promptSuggestions: (status = 'pending') => req(`/prompts/suggestions?status=${status}`),
+  promptSuggestionAdopt: (id) => req(`/prompts/suggestions/${id}/adopt`, { method: 'POST' }),
+  promptSuggestionReject: (id) => req(`/prompts/suggestions/${id}/reject`, { method: 'POST' }),
+  promptFeedback: (market) => req(`/prompts/feedback?market=${market}`, { method: 'POST' }),
+  promptABRun: (body) => req('/prompts/ab/run', { method: 'POST', body: JSON.stringify(body) }),
 };

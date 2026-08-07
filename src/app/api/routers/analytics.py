@@ -12,6 +12,7 @@ from app.agents.feedback_analyst import FeedbackAnalystAgent, collect_metrics
 from app.analytics import build_dashboard
 from app.llm import get_llm
 from app.models import EvalReport, Market, SessionLocal, Task
+from app.services.prompt_versions import persist_structured_suggestions
 from app.simulator import compute_calibration, simulate_events
 
 router = APIRouter()
@@ -75,10 +76,14 @@ async def run_feedback(market: str = "US"):
             suggestions=report_data.get("suggestions", []),
         )
         session.add(report)
+        # M3：把结构化迭代建议落库为 pending 的 PromptSuggestion（待人审闸门采纳）
+        suggestion_ids = await persist_structured_suggestions(
+            session, report_data.get("structured_suggestions", []), market=market)
         task.status = "done"
         await ctx.persist()
         await session.commit()
-        return {"ok": True, "report_id": report.id, **report_data}
+        return {"ok": True, "report_id": report.id,
+                "suggestion_ids": suggestion_ids, **report_data}
 
 
 @router.get("/reports")
