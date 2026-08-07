@@ -2,7 +2,7 @@
 const root = document.getElementById('view-root');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView };
+const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView, analytics: analyticsView };
 
 function route() {
   const hash = location.hash.slice(1) || 'overview';
@@ -918,6 +918,181 @@ function renderPatch(p) {
     const r = await API.kbReject(p.patch_id);
     if (r.ok) loadGovernance(); else alert(r.error || '失败');
   };
+}
+
+/* ---------- 分析中心（M2）：SQL 驱动指标看板 ----------
+   每个图表由后端手写 SQL 实时计算，前端展示真实 SQL 原文（可展开），
+   消费类图表统一标注「仿真」角标。纯 SVG 渲染，无第三方图表库。 */
+async function analyticsView() {
+  root.innerHTML = '<div class="loading">加载分析中心…</div>';
+  try {
+    const data = await API.analyticsCenter();
+    renderAnalytics(data);
+  } catch (e) { root.innerHTML = errBox(e); }
+}
+
+function renderAnalytics(data) {
+  const charts = data.charts || [];
+  const sim = charts.filter(c => c.reality === 'simulated').length;
+  root.innerHTML = `
+    <h1 class="page-title">分析中心</h1>
+    <p class="page-sub">全部指标由后端手写 SQL 实时计算（非 ORM）。供给 / 成本 / 质量类来自真实运行数据，消费类来自仿真器（已标注「仿真」）。每张图下方可展开驱动它的真实 SQL。</p>
+    <div class="toolbar" style="margin-bottom:14px">
+      <span class="tag gray">共 ${charts.length} 图</span>
+      <span class="tag green">真实 ${charts.length - sim}</span>
+      <span class="tag orange">仿真 ${sim}</span>
+      <button class="btn ghost" id="btn-refresh-analytics">⟳ 刷新</button>
+    </div>
+    <div class="charts-grid">${charts.map(chartCard).join('')}</div>`;
+  const btn = document.getElementById('btn-refresh-analytics');
+  if (btn) btn.onclick = analyticsView;
+}
+
+function chartCard(c) {
+  const badge = c.reality === 'simulated'
+    ? '<span class="tag orange">仿真</span>'
+    : '<span class="tag green">真实</span>';
+  const head = (c.headline && c.headline.kind) ? statHead(c.headline) : '';
+  return `<div class="chart-card">
+    <div class="chart-head"><h3>${esc(c.title)}</h3>${badge}</div>
+    ${head}
+    <div class="chart-body">${renderChart(c)}</div>
+    <p class="chart-note">${esc(c.note || '')}</p>
+    <details class="sql-reveal"><summary>驱动此图的 SQL ▸</summary><pre>${esc(c.sql)}</pre></details>
+  </div>`;
+}
+
+function statHead(h) {
+  if (h.kind === 'cost')
+    return `<div class="stat-big">${esc(h.value)}<span class="stat-suffix">${esc(h.suffix || '')}</span></div><div class="stat-sub">${esc(h.sub || '')}</div>`;
+  if (h.kind === 'rate')
+    return `<div class="stat-big">${(Number(h.value) * 100).toFixed(1)}%</div><div class="stat-sub">${esc(h.sub || '')}</div>`;
+  return '';
+}
+
+function renderChart(c) {
+  switch (c.chart) {
+    case 'bar': return svgBar(c);
+    case 'grouped_bar': return svgGroupedBar(c);
+    case 'cohort': case 'line': return svgLine(c);
+    case 'funnel': return svgFunnel(c);
+    case 'heat': return svgHeat(c);
+    default: return '';
+  }
+}
+
+function fmtNum(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  if (n === 0) return '0';
+  if (Number.isInteger(n)) return n.toLocaleString('en-US');
+  return n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function svgBar(c) {
+  const labels = c.rows.map(r => String(r[0]));
+  const vals = c.rows.map(r => Number(r[r.length - 1]) || 0);
+  if (!vals.length) return '<div class="muted">暂无数据</div>';
+  const max = Math.max(1e-9, ...vals);
+  const W = 600, H = 220, padL = 46, padB = 42, padT = 12, padR = 12;
+  const n = labels.length, gap = (W - padL - padR) / n, bw = gap * 0.6;
+  let s = '';
+  vals.forEach((v, i) => {
+    const x = padL + i * gap + (gap - bw) / 2;
+    const h = (v / max) * (H - padT - padB);
+    const y = H - padB - h;
+    s += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" rx="3" fill="#4c8bf5"/>`;
+    if (h > 14) s += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="11" fill="#334">${fmtNum(v)}</text>`;
+    s += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - padB + 14}" text-anchor="middle" font-size="10" fill="#778">${esc(labels[i].length > 10 ? labels[i].slice(0, 10) + '…' : labels[i])}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg">${s}</svg>`;
+}
+
+function svgFunnel(c) {
+  const rows = c.rows || [];
+  if (!rows.length) return '<div class="muted">暂无数据</div>';
+  const max = Math.max(1e-9, ...rows.map(r => Number(r[1]) || 0));
+  const W = 600, H = 220, padT = 10, padL = 170;
+  const n = rows.length, slot = (H - padT - 8) / n, bh = slot * 0.66;
+  let s = '';
+  rows.forEach((r, i) => {
+    const v = Number(r[1]) || 0, w = (v / max) * (W - padL - 40), y = padT + i * slot + (slot - bh) / 2;
+    s += `<rect x="${padL}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="#6a5acd"/>`;
+    s += `<text x="${padL - 8}" y="${(y + bh / 2 + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#334">${esc(String(r[0]))}</text>`;
+    s += `<text x="${(padL + w + 8).toFixed(1)}" y="${(y + bh / 2 + 4).toFixed(1)}" font-size="11" fill="#778">${fmtNum(v)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg">${s}</svg>`;
+}
+
+const CHART_COLORS = ['#4c8bf5', '#f5a623', '#2bb673', '#e056a0', '#7c5cff', '#19b3c4'];
+
+function svgLine(c) {
+  const labels = c.headline?.labels || [];
+  const series = c.headline?.series || [];
+  if (!series.length) return '<div class="muted">暂无数据</div>';
+  const W = 600, H = 240, padL = 46, padB = 28, padT = 12, padR = 12;
+  const all = series.flatMap(s => s.data);
+  const max = Math.max(1e-9, ...all);
+  const n = labels.length || all.length;
+  const xstep = n > 1 ? (W - padL - padR) / (n - 1) : 0;
+  let s = `<line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#e2e6ef"/>`;
+  series.forEach((ser, si) => {
+    const col = CHART_COLORS[si % CHART_COLORS.length];
+    let path = '';
+    ser.data.forEach((v, i) => {
+      const x = padL + i * xstep, y = (H - padB) - ((v / max) * (H - padT - padB));
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    });
+    s += `<path d="${path}" fill="none" stroke="${col}" stroke-width="2"/>`;
+    ser.data.forEach((v, i) => {
+      const x = padL + i * xstep, y = (H - padB) - ((v / max) * (H - padT - padB));
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="${col}"/>`;
+    });
+  });
+  labels.forEach((lb, i) => {
+    if (n <= 8 || i % Math.ceil(n / 8) === 0)
+      s += `<text x="${(padL + i * xstep).toFixed(1)}" y="${H - padB + 13}" text-anchor="middle" font-size="9" fill="#778">${esc(String(lb))}</text>`;
+  });
+  let leg = series.map((ser, si) => `<span class="lg"><i style="background:${CHART_COLORS[si % CHART_COLORS.length]}"></i>${esc(ser.name)}</span>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg">${s}</svg><div class="legend">${leg}</div>`;
+}
+
+function svgGroupedBar(c) {
+  const labels = c.headline?.labels || [];
+  const series = c.headline?.series || [];
+  if (!series.length) return '<div class="muted">暂无数据</div>';
+  const W = 600, H = 240, padL = 40, padB = 42, padT = 12, padR = 12;
+  const all = series.flatMap(s => s.data);
+  const max = Math.max(1e-9, ...all);
+  const n = labels.length, groupW = (W - padL - padR) / n, bw = groupW * 0.72 / series.length;
+  let s = '';
+  labels.forEach((lb, i) => {
+    const gx = padL + i * groupW + groupW * 0.14;
+    series.forEach((ser, si) => {
+      const v = ser.data[i] || 0, h = (v / max) * (H - padT - padB), x = gx + si * bw, y = H - padB - h;
+      s += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" rx="2" fill="${CHART_COLORS[si % CHART_COLORS.length]}"/>`;
+    });
+    s += `<text x="${(gx + groupW * 0.36).toFixed(1)}" y="${H - padB + 14}" text-anchor="middle" font-size="10" fill="#778">${esc(String(lb))}</text>`;
+  });
+  let leg = series.map((ser, si) => `<span class="lg"><i style="background:${CHART_COLORS[si % CHART_COLORS.length]}"></i>${esc(ser.name)}</span>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg">${s}</svg><div class="legend">${leg}</div>`;
+}
+
+function svgHeat(c) {
+  const cols = c.columns || [], rows = c.rows || [];
+  if (!rows.length) return '<div class="muted">暂无数据</div>';
+  const all = rows.flatMap(r => r.slice(1).map(Number));
+  const max = Math.max(1e-9, ...all);
+  let h = `<table class="heat-table"><thead><tr>${cols.map(x => `<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    h += `<tr><td class="hm-label">${esc(String(r[0]))}</td>`;
+    r.slice(1).forEach(v => {
+      const t = Number(v) || 0, inten = Math.min(1, t / max), bg = `rgba(76,139,245,${(0.1 + inten * 0.72).toFixed(3)})`;
+      h += `<td style="background:${bg}">${fmtNum(t)}</td>`;
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table>';
 }
 
 /* ---------- 工具 ---------- */
