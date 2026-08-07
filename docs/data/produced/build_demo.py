@@ -187,7 +187,7 @@ HTML_TPL = r"""<!DOCTYPE html>
 </div>
 
 <script>
-const PAYLOAD = /*__PAYLOAD__*/ {};
+const PAYLOAD = /*__PAYLOAD__*/;
 const M = PAYLOAD.meta, FR = PAYLOAD.frames, DR = PAYLOAD.drift;
 document.getElementById('wv').textContent = M.writer_version || 'v3';
 const metaRow = document.getElementById('metaRow');
