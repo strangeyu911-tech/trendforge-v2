@@ -65,6 +65,14 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
   - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
   - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
 
+## 分析中心（M2 · `v2.3-analytics`）
+
+> 把指标体系从「文档里的 SQL」变成「控制台里可点的图表」。所有分析用**手写 SQL（不用 ORM）**，每张图可展开真实 SQL 原文；真实数据（供给/质量/成本）与仿真数据（消费表现）在 UI 严格区分、仿真图统一打「仿真」角标。仿真器由 M1 真实信号互动分布校准（`compute_calibration`），事件按内容生命周期指数衰减摊开。
+
+- 后端：`src/app/analytics/queries.py`（8 图 SQL，5/8 用窗口函数/多级 CTE）+ `src/app/api/routers/analytics.py`（`GET /center`、`GET /calibration`）
+- 前端：控制台「分析中心」视图（`ui/console/`，纯 SVG 无第三方库）
+- 校准：仿真器参数由 `contents.signals`（HN/Dev.to points/comments）拟合，详见 `src/app/simulator.py`
+
 ## 主题漂移防护（M5 · `v2.6`）
 
 > 08-06 实测出现"拼盘稿"（主线被电竞/百度/中超/歌手等无关新闻污染）。M5 用四层防护彻底解决：L0 检索层修复放宽逻辑 → L1 新增 TopicGuard 硬闸门（TCS 主题一致性分，零 token、语言无关）→ L2 引用约束反转（60% 以上引用须来自主干）→ L3 fallback 去拼盘（兜底稿固定 2 节只引主干）。
