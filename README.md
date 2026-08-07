@@ -64,6 +64,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - [docs/RUN_REPORT_v1.1.md](docs/RUN_REPORT_v1.1.md) — **真实运行报告（定稿版）**：M1 真实信号驱动、17 条真实运行，交出产出率 70.6% / FPY 0% / 单位有效成本 ¥0.50（含废稿摊销）/ 失败归因 / Rubric 五维，并记录一次扩样失败暴露的环境可靠性问题
   - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
   - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
+- [docs/CLOSED_LOOP_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_EVIDENCE_v1.0.md) — **M3 闭环实跑证据（PM 向）**：2026-08-07 真实 LLM 跑通「FeedbackAnalyst→人审采纳→A/B」，写入覆盖层无需重启；同选题双跑质量 +0.4 / CTR +0.01 / 成本 −¥0.0681。原始证据 [docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json](docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json)
 
 ## 分析中心（M2 · `v2.3-analytics`）
 
@@ -83,6 +84,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 - 人审闸门 API（`src/app/api/routers/prompts.py`）：`POST /prompts/suggestions/{id}/adopt` 采纳生成新版本、`/versions/{id}/adopt` 回滚、版本 `diff`
 - 极简 A/B（`src/app/workflow/ab.py`）：同一选题用两版 Prompt 各跑一次 produce 段 → 仿真 → 对比质量分 / CTR / 成本；顺带交付「同选题多版本改写」
 - 前端：控制台「迭代闭环」视图（提议 → 人审 → 采纳 → 回滚 → A/B，复用 KBCurator 人审闸门 UI）
+- 实跑证据：[docs/CLOSED_LOOP_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_EVIDENCE_v1.0.md) + 原始 JSON [docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json](docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json)（2026-08-07 真实 LLM 跑通全链路，采纳后覆盖层生效无需重启）
 
 ## 主题漂移防护（M5 · `v2.6`）
 
