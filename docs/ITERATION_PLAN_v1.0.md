@@ -51,7 +51,7 @@
 > **当前进度（截至 2026-08-07）**
 > - ✅ **M1 真实信号接入** `v2.2-real-signals` — 已完成（HN Algolia / Dev.to / GDELT 三源、KB 自动回流、信号溯源 UI、种子库虚构占比降至 16.5%）
 > - ✅ **M2 分析深度与 SQL 证据** `v2.3-analytics` — **本次完成**：`src/app/analytics/queries.py` 手写 SQL 指标层（8 图，≥5 条用窗口函数/CTE）、`/api/analytics/center` 端点、仿真器 `calibrated_from` 校准、前端分析中心（SVG 图表 + 可展开真实 SQL + 仿真角标）
-> - ⏳ **M3 可执行闭环与 A/B** `v2.4-closed-loop` — **待做**
+> - ⏳ **M3 可执行闭环与 A/B** `v2.4-closed-loop` — **本次完成**：`PromptRecord` 扩展(source/adopted/parent_version/adopted_at) + 新增 `PromptSuggestion` 表；`PromptManager` 覆盖层（采纳版本运行时生效，无需重启）；`FeedbackAnalyst` 建议结构化(含完整新版 prompt)；`/api/prompts/*`（模板/版本/采纳/回滚/diff/建议人审闸门/A-B）；前端「迭代闭环」视图(提议→人审→采纳→回滚→A/B，复用 KBCurator 范式)；`app/workflow/ab.py` 同选题双跑 produce 段对比质量/CTR/成本
 > - ✅ **M4 PM 文档与运行证据** `v2.5-pm-docs` — 已完成（指标体系 / 内容形态 / 规模化 / 真实运行报告 v1.1）
 > - 🔧 **计划外已交付**：revise 机制（`v2-revise-mechanism`/`v2-revise-state`）、中文回译镜像（`v2-zh-mirror`）、M5 主题漂移四层防护（`v2.6`）、真实运行证据落盘（`v2.5.1-run-evidence`）。这些在原计划之外，但进一步补强了「真实感 + 人审闭环」叙事。
 
