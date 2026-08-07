@@ -2,7 +2,7 @@
 const root = document.getElementById('view-root');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView, analytics: analyticsView };
+const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView, analytics: analyticsView, closedloop: closedLoopView };
 
 function route() {
   const hash = location.hash.slice(1) || 'overview';
@@ -1101,6 +1101,168 @@ function statusTag(s) {
   return `<span class="tag ${map[s] || 'gray'}">${s}</span>`;
 }
 function errBox(e) { return `<div class="panel" style="color:#d43d3d">加载失败：${esc(e.message)}<br><small>后端可能冷启动中（Render 免费层休眠约 30-60s），请稍候刷新</small></div>`; }
+
+/* ---------- 迭代闭环（M3）：AI 提议 → 人审闸门 → 采纳 → 回滚 → A/B ---------- */
+async function closedLoopView() {
+  root.innerHTML = '<div class="loading">加载中…</div>';
+  try {
+    const tpls = await API.promptTemplates();
+    root.innerHTML = `
+      <h1 class="page-title">迭代闭环</h1>
+      <p class="page-sub">AI 只提议、不自动改系统：FeedbackAnalyst 产出结构化迭代建议 → 人审采纳生成新版本并覆盖生效 → 可 diff / 回滚；同一选题用两版 Prompt 各跑一次即 A/B 验证。</p>
+      <div class="panel"><h3>① 迭代建议（AI 提议 · 人审闸门）</h3>
+        <div class="toolbar">
+          <input id="cl-market" value="US" style="width:70px" title="市场码">
+          <button class="btn" id="cl-feedback">运行 FeedbackAnalyst</button>
+          <button class="btn ghost" id="cl-reload-sug">刷新</button>
+        </div>
+        <div id="cl-suggestions" class="loading">暂无建议</div>
+      </div>
+      <div class="panel"><h3>② Prompt 版本治理（采纳 / 回滚 / diff）</h3>
+        <div class="toolbar">
+          <select id="cl-tpl"></select>
+          <button class="btn ghost" id="cl-reload-ver">刷新版本</button>
+        </div>
+        <div id="cl-versions" class="loading">选择模板查看版本</div>
+        <pre id="cl-diff" class="diff" style="display:none"></pre>
+      </div>
+      <div class="panel"><h3>③ A/B 对比（同一选题 · 两版 Prompt）</h3>
+        <div class="toolbar">
+          <select id="cl-ab-tpl"></select>
+          <select id="cl-ab-v1"><option value="">v1 版本</option></select>
+          <select id="cl-ab-v2"><option value="">v2 版本</option></select>
+          <input id="cl-ab-angle" placeholder="选题 / 角度（如：AI 监管）" style="width:200px">
+          <input id="cl-ab-market" value="US" style="width:64px" title="市场码">
+          <button class="btn" id="cl-ab-run">运行 A/B</button>
+        </div>
+        <div id="cl-ab-result" class="loading">选择两版 Prompt 并输入选题后运行</div>
+      </div>`;
+    const opts = tpls.templates.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    document.getElementById('cl-tpl').innerHTML = opts;
+    document.getElementById('cl-ab-tpl').innerHTML = opts;
+    document.getElementById('cl-feedback').onclick = runFeedback;
+    document.getElementById('cl-reload-sug').onclick = loadSuggestions;
+    document.getElementById('cl-reload-ver').onclick = () => loadVersions(document.getElementById('cl-tpl').value);
+    document.getElementById('cl-tpl').onchange = (e) => loadVersions(e.target.value);
+    document.getElementById('cl-ab-tpl').onchange = (e) => loadAbVersions(e.target.value);
+    document.getElementById('cl-ab-run').onclick = runAB;
+    loadSuggestions();
+    loadVersions(tpls.templates[0]);
+  } catch (e) { root.innerHTML = errBox(e); }
+}
+
+async function runFeedback() {
+  const box = document.getElementById('cl-suggestions');
+  box.innerHTML = 'FeedbackAnalyst 分析中…（消费数据 → 结构化建议，可能 10-30s）';
+  try {
+    const market = document.getElementById('cl-market').value.trim() || 'US';
+    const r = await API.promptFeedback(market);
+    alert(`已生成 ${r.suggestion_ids.length} 条可采纳迭代建议`);
+    loadSuggestions();
+  } catch (e) { box.innerHTML = errBox(e); }
+}
+
+async function loadSuggestions() {
+  const box = document.getElementById('cl-suggestions');
+  try {
+    const r = await API.promptSuggestions('pending');
+    const sugs = r.suggestions || [];
+    if (!sugs.length) { box.innerHTML = '<span style="color:#77809a;font-size:12px">暂无待审建议（先点「运行 FeedbackAnalyst」）</span>'; return; }
+    box.innerHTML = sugs.map(s => `
+      <div class="finding" style="background:#eef4ff;border-left:3px solid #3a6df0">
+        <span class="tag blue">${esc(s.target_template)}</span>
+        <span class="tag gray">${esc(s.section || '—')}</span>
+        <span class="tag green">预期改善 ${esc(s.expected_metric || '—')}</span>
+        <div style="margin:6px 0 4px"><b>改法：</b>${esc(s.proposed_change)}</div>
+        <div style="font-size:12px;color:#55607a">理由：${esc(s.rationale)}</div>
+        <details style="margin-top:6px"><summary style="cursor:pointer;color:#3a6df0;font-size:12px">查看完整新版 Prompt</summary>
+          <pre class="diff" style="max-height:200px;overflow:auto">${esc(s.new_prompt)}</pre></details>
+        <div class="toolbar" style="margin-top:6px">
+          <button class="btn" data-adopt="${s.id}">✅ 人审采纳（生成新版本）</button>
+          <button class="btn ghost" data-reject="${s.id}">❌ 拒绝</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('[data-adopt]').forEach(b => b.onclick = async () => {
+      const res = await API.promptSuggestionAdopt(b.dataset.adopt);
+      if (res.ok) { alert(`已采纳 → ${res.name}@${res.version}（下一轮运行即生效）`); loadSuggestions(); }
+      else alert(res.error || '采纳失败');
+    });
+    box.querySelectorAll('[data-reject]').forEach(b => b.onclick = async () => {
+      const res = await API.promptSuggestionReject(b.dataset.reject);
+      if (res.ok) loadSuggestions(); else alert(res.error || '拒绝失败');
+    });
+  } catch (e) { box.innerHTML = errBox(e); }
+}
+
+async function loadVersions(tpl) {
+  const box = document.getElementById('cl-versions');
+  try {
+    const r = await API.promptVersions(tpl);
+    const vs = r.versions || [];
+    if (!vs.length) { box.innerHTML = '<span style="color:#77809a;font-size:12px">该模板暂无版本</span>'; return; }
+    const adopted = vs.find(v => v.adopted);
+    box.innerHTML = vs.map(v => `
+      <div class="finding" style="background:${v.adopted ? '#e3f8f2' : '#f6f8fc'}">
+        <span class="tag ${v.adopted ? 'green' : 'gray'}">${esc(v.version)}</span>
+        <span class="tag">${esc(v.source)}</span>
+        ${v.adopted ? '<span class="tag green">● 生效中</span>' : ''}
+        ${v.parent_version ? `<span class="tag gray">← ${esc(v.parent_version)}</span>` : ''}
+        <span style="font-size:12px;color:#77809a">${fmtTime(v.created_at)}</span>
+        <div class="toolbar" style="margin-top:6px">
+          ${v.adopted ? '<span class="tag green">当前生效</span>'
+            : `<button class="btn" data-adopt-v="${v.id}">采纳 / 回滚至此</button>`}
+          ${adopted && !v.adopted ? `<button class="btn ghost" data-diff="${v.id}" data-adopted="${adopted.id}">对比生效版</button>` : ''}
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('[data-adopt-v]').forEach(b => b.onclick = async () => {
+      const res = await API.promptVersionAdopt(b.dataset.adoptV);
+      if (res.ok) { alert(`已采纳 ${res.name}@${res.version}`); loadVersions(tpl); }
+      else alert(res.error || '失败');
+    });
+    box.querySelectorAll('[data-diff]').forEach(b => b.onclick = async () => {
+      const d = await API.promptVersionDiff(b.dataset.diff, b.dataset.adopted);
+      const pre = document.getElementById('cl-diff');
+      pre.style.display = 'block';
+      pre.textContent = d.diff || '（无差异）';
+      pre.scrollIntoView({ behavior: 'smooth' });
+    });
+  } catch (e) { box.innerHTML = errBox(e); }
+}
+
+async function loadAbVersions(tpl) {
+  const r = await API.promptVersions(tpl);
+  const vs = (r.versions || []).map(v => `<option value="${v.id}">${esc(v.name)}@${esc(v.version)} (${esc(v.source)})</option>`).join('');
+  document.getElementById('cl-ab-v1').innerHTML = '<option value="">v1 版本</option>' + vs;
+  document.getElementById('cl-ab-v2').innerHTML = '<option value="">v2 版本</option>' + vs;
+}
+
+async function runAB() {
+  const box = document.getElementById('cl-ab-result');
+  const tpl = document.getElementById('cl-ab-tpl').value;
+  const v1 = document.getElementById('cl-ab-v1').value;
+  const v2 = document.getElementById('cl-ab-v2').value;
+  const angle = document.getElementById('cl-ab-angle').value.trim();
+  const market = document.getElementById('cl-ab-market').value.trim() || 'US';
+  if (!v1 || !v2) { alert('请为 v1 / v2 各选一个 Prompt 版本'); return; }
+  if (!angle) { alert('请填写选题 / 角度'); return; }
+  box.innerHTML = 'A/B 运行中…（两版 Prompt 各跑一次 produce 段并仿真，约数十秒）';
+  try {
+    const r = await API.promptABRun({ market, template: tpl, v1_id: Number(v1), v2_id: Number(v2), angle });
+    const v1m = r.v1, v2m = r.v2, d = r.delta;
+    box.innerHTML = `
+      <div class="cards">
+        <div class="card"><div class="kpi">${v1m.version}</div><div class="kpi-label">v1 版本</div>
+          <div style="margin-top:6px;font-size:12px">质量 ${v1m.quality_avg} · CTR ${v1m.ctr} · 曝光 ${v1m.exposed} · 成本 ¥${v1m.cost_cny}</div></div>
+        <div class="card"><div class="kpi">${v2m.version}</div><div class="kpi-label">v2 版本</div>
+          <div style="margin-top:6px;font-size:12px">质量 ${v2m.quality_avg} · CTR ${v2m.ctr} · 曝光 ${v2m.exposed} · 成本 ¥${v2m.cost_cny}</div></div>
+        <div class="card"><div class="kpi">Δ</div><div class="kpi-label">v2 − v1</div>
+          <div style="margin-top:6px;font-size:12px">质量 ${d.quality_avg >= 0 ? '+' : ''}${d.quality_avg} · CTR ${d.ctr >= 0 ? '+' : ''}${d.ctr} · 成本 ${d.cost_cny >= 0 ? '+' : ''}${d.cost_cny}</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:#55607a">
+        v1 内容 <a href="#content/${v1m.content_id}" style="color:#3a6df0">${v1m.content_id}</a> · v2 内容 <a href="#content/${v2m.content_id}" style="color:#3a6df0">${v2m.content_id}</a>
+      </div>`;
+  } catch (e) { box.innerHTML = errBox(e); }
+}
 
 /* ---------- 启动 ---------- */
 (async () => {

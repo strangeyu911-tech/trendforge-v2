@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.llm import OpenAICompatibleLLM
 from app.models import Market, Task, TaskSpan
+from app.prompts.manager import get_pm
 
 EV_RE = re.compile(r"\s*\[ev_\d+\]")
 
@@ -124,7 +125,7 @@ class BaseAgent(ABC):
                 span.warnings = result.pop("_warnings")
                 span.status = "degraded"
             if self.prompt_name:
-                ctx.prompt_versions[self.name] = f"{self.prompt_name}@v1"
+                ctx.prompt_versions[self.name] = f"{self.prompt_name}@{get_pm().active_version(self.prompt_name)}"
         except Exception as e:
             err = e if isinstance(e, AgentError) else AgentError(self.name, str(e))
             span.status = "degraded"

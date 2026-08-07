@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import analytics, contents, kb, misc, pipeline
+from app.api.routers import analytics, contents, kb, misc, pipeline, prompts
 from app.seed import seed_all
 
 app = FastAPI(title="TrendForge V2 — AI Native 内容供给引擎", version="2.0.0")
@@ -32,3 +32,4 @@ app.include_router(pipeline.router, prefix="/api/pipeline", tags=["pipeline"])
 app.include_router(contents.router, prefix="/api", tags=["contents"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(kb.router, prefix="/api", tags=["kb"])
+app.include_router(prompts.router, prefix="/api", tags=["prompts"])
