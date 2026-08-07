@@ -9,9 +9,10 @@ from sqlalchemy import select
 
 from app.agents.base import RunContext
 from app.agents.feedback_analyst import FeedbackAnalystAgent, collect_metrics
+from app.analytics import build_dashboard
 from app.llm import get_llm
 from app.models import EvalReport, Market, SessionLocal, Task
-from app.simulator import simulate_events
+from app.simulator import compute_calibration, simulate_events
 
 router = APIRouter()
 
@@ -23,7 +24,29 @@ class SimulateRequest(BaseModel):
 
 @router.post("/events/simulate")
 async def simulate(req: SimulateRequest):
+    # 返回含 calibrated_from 元信息：仿真锚定在多少真实信号上
     return await simulate_events(content_id=req.content_id, per_content=req.per_content)
+
+
+@router.get("/center")
+async def center():
+    """M2 分析中心：返回所有图表描述符（含真实执行的 SQL 原文 + 数据）"""
+    async with SessionLocal() as session:
+        specs = await build_dashboard(session)
+    return {"charts": specs, "generated_at": _now_iso()}
+
+
+@router.get("/calibration")
+async def calibration():
+    """当前仿真器校准状态：是否已用 M1 真实信号分布拟合"""
+    async with SessionLocal() as session:
+        cal = await compute_calibration(session)
+    return {"calibrated": bool(cal), "calibration": cal}
+
+
+def _now_iso() -> str:
+    from datetime import datetime
+    return datetime.utcnow().isoformat()
 
 
 @router.get("/overview")

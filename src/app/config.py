@@ -7,7 +7,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent          # src/app
 DATA_DIR = BASE_DIR / "data"
 KB_DIR = DATA_DIR / "kb"
-DB_PATH = DATA_DIR / "trendforge_v2.db"
+# 可用环境变量 TF_DB_PATH 覆盖数据库路径（本地多库调试 / 离线重跑仿真用；Render 不设置，默认本地库）
+DB_PATH = Path(os.getenv("TF_DB_PATH", str(DATA_DIR / "trendforge_v2.db")))
 
 
 class Settings:

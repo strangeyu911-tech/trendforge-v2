@@ -28,6 +28,8 @@ const API = {
   contentReviseJob: (jobId) => req(`/contents/jobs/${jobId}`),
   trace: (id) => req(`/contents/${id}/trace`),
   simulate: (contentId) => req('/analytics/events/simulate', { method: 'POST', body: JSON.stringify({ content_id: contentId || null }) }),
+  analyticsCenter: () => req('/analytics/center'),
+  analyticsCalibration: () => req('/analytics/calibration'),
   analyticsOverview: () => req('/analytics/overview'),
   runFeedback: (market) => req(`/analytics/run-feedback?market=${market}`, { method: 'POST' }),
   reports: () => req('/analytics/reports'),
