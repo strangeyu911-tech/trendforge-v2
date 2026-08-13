@@ -1371,9 +1371,8 @@ function calProgress() {
   if (btn) btn.textContent = `提交 ${done} 篇已评`;
 }
 function calFill(el) {
-  const min = 1, max = 5;
-  const p = ((parseFloat(el.value) - min) / (max - min)) * 100;
-  el.style.background = `linear-gradient(to right, #4338ca 0%, #4338ca ${p}%, #e5e7eb ${p}%, #e5e7eb 100%)`;
+  const p = ((parseFloat(el.value) - 1) / (5 - 1)) * 100;
+  el.style.setProperty('--p', p + '%');
 }
 async function calSubmit() {
   const msg = document.getElementById('cal-msg');
@@ -1392,8 +1391,10 @@ async function calSubmit() {
     const r = await API.calibrationSubmit({ rater, scores: payload });
     if (r.ok) {
       const nCal = r.per_content ? Object.keys(r.per_content).length : (r.n || 0);
+      const err = r.compute_error ? ` · ⚠️ 对齐未生成（${esc(r.compute_error)}）` : '';
       msg.innerHTML = `✅ 已保存（评审人 <b>${esc(rater)}</b>）· 共 <b>${nCal}</b> 条内容已校准`
-        + (r.overall_rho != null ? ` · 整体 Spearman ρ=<b>${r.overall_rho}</b>，相邻一致 <b>${r.overall_adj}</b>` : '');
+        + (r.overall_rho != null ? ` · 整体 Spearman ρ=<b>${r.overall_rho}</b>，相邻一致 <b>${r.overall_adj}</b>` : '')
+        + err;
       calShowReport();
     } else msg.textContent = '提交失败';
   } catch (e) { msg.textContent = '提交失败：' + e.message; }

@@ -199,11 +199,16 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
 /* 校准页：单篇提交 */
 .card-actions { display:flex; align-items:center; gap:10px; margin:10px 0 2px; }
 .btn.sm { padding:5px 12px; font-size:12.5px; }
-/* 校准页评分滑块：负 margin 让 1/5 分能拖到最左/最右 */
+/* 校准页评分滑块：负 margin 让 1/5 分能拖到最左/最右；
+   填充渐变放在轨道伪元素上（与滑块同坐标系），由 --p 变量驱动，左侧填充/右侧空 */
 .dim-range-wrap { flex:1; min-width:0; }
 .cal-range { -webkit-appearance:none; appearance:none; width:calc(100% + 16px); margin-left:-8px;
-  height:6px; border-radius:99px; background:#e5e7eb; outline:none; cursor:pointer; }
-.cal-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px;
-  border-radius:50%; background:#4338ca; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer; }
-.cal-range::-moz-range-thumb { width:16px; height:16px; border:none; border-radius:50%; background:#4338ca; cursor:pointer; }
-.cal-range::-moz-range-track { height:6px; border-radius:99px; background:transparent; }
+  height:6px; border-radius:99px; background:transparent; outline:none; cursor:pointer; }
+.cal-range::-webkit-slider-runnable-track { height:6px; border-radius:99px;
+  background: linear-gradient(to right, #4338ca 0%, #4338ca var(--p,50%), #e5e7eb var(--p,50%), #e5e7eb 100%); }
+.cal-range::-moz-range-track { height:6px; border-radius:99px;
+  background: linear-gradient(to right, #4338ca 0%, #4338ca var(--p,50%), #e5e7eb var(--p,50%), #e5e7eb 100%); }
+.cal-range::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:18px; height:18px;
+  border-radius:50%; background:#fff; border:3px solid #4338ca; box-shadow:0 1px 3px rgba(0,0,0,.25);
+  margin-top:-6px; cursor:pointer; }
+.cal-range::-moz-range-thumb { width:18px; height:18px; border:3px solid #4338ca; border-radius:50%; background:#fff; cursor:pointer; }
