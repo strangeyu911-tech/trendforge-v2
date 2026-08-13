@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -13,11 +13,13 @@ from app.config import settings
 
 @dataclass
 class LLMResponse:
-    text: str
+    text: str = ""
     model: str = ""
     tokens_in: int = 0
     tokens_out: int = 0
     cost_cny: float = 0.0
+    tool_calls: list = field(default_factory=list)   # native function calling 解析结果
+    finish_reason: str = "stop"
 
 
 class LLMError(Exception):
@@ -83,6 +85,77 @@ class OpenAICompatibleLLM:
             if attempt < settings.llm_max_retries - 1:
                 await asyncio.sleep(min(2 ** attempt * 2, 20))
         raise LLMError(f"LLM 调用失败（重试 {settings.llm_max_retries} 次）: {last_err}")
+
+    async def chat_with_tools(self, system: str, user: str, tools: list, *,
+                              tool_messages: list | None = None,
+                              temperature: float = 0.7, max_tokens: int = 8000,
+                              json_mode: bool = False) -> LLMResponse:
+        """原生 function calling：支持 tools 参数的模型（如 deepseek-chat）走此路径。
+        - 首轮：传 system/user/tools，模型可返回 tool_calls。
+        - 次轮：把 tool_messages（assistant 的 tool_calls + tool 结果）整体回传，收尾生成。
+        推理模型（如 deepseek-reasoner/v4-flash）常不触发 tool_calls，调用方应做程序化兜底。
+        """
+        if not self.api_key:
+            raise LLMError("LLM API key 未配置")
+        if tool_messages is not None:
+            messages = tool_messages
+        else:
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ]
+        payload: dict = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "tools": tools,
+            "tool_choice": "auto",
+        }
+        # 部分模型不允许 tools 与 json_object 同时出现，收尾轮才按需开启
+        if json_mode and not tools:
+            payload["response_format"] = {"type": "json_object"}
+
+        last_err: Exception | None = None
+        for attempt in range(settings.llm_max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=settings.llm_timeout) as client:
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers={"Authorization": f"Bearer {self.api_key}"},
+                        json=payload,
+                    )
+                if resp.status_code >= 400:
+                    raise LLMError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+                data = resp.json()
+                msg = data["choices"][0]["message"]
+                content = msg.get("content") or ""
+                raw_tc = msg.get("tool_calls") or []
+                finish_reason = data["choices"][0].get("finish_reason", "stop")
+                usage = data.get("usage") or {}
+                tin = int(usage.get("prompt_tokens", 0))
+                tout = int(usage.get("completion_tokens", 0))
+                cost = round(tin * settings.llm_price_in / 1e6 + tout * settings.llm_price_out / 1e6, 6)
+                norm_tc = []
+                for tc in raw_tc:
+                    fn = tc.get("function", {})
+                    try:
+                        args = json.loads(fn.get("arguments", "{}") or "{}")
+                    except Exception:
+                        args = {}
+                    norm_tc.append({"id": tc.get("id"), "name": fn.get("name"), "arguments": args})
+                return LLMResponse(text=content.strip(), model=self.model,
+                                   tokens_in=tin, tokens_out=tout, cost_cny=cost,
+                                   tool_calls=norm_tc, finish_reason=finish_reason)
+            except LLMError as e:
+                last_err = e
+                if "HTTP 4" in str(e) and "429" not in str(e):
+                    raise
+            except Exception as e:
+                last_err = e
+            if attempt < settings.llm_max_retries - 1:
+                await asyncio.sleep(min(2 ** attempt * 2, 20))
+        raise LLMError(f"LLM(tools) 调用失败（重试 {settings.llm_max_retries} 次）: {last_err}")
 
 
 _JSON_BLOCK = re.compile(r"```(?:json)?\s*([\s\S]*?)```")
