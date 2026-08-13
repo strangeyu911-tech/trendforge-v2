@@ -33,8 +33,8 @@
 **B. 评估者"人工校准"证据缺失（已建工具链，待真人分）**
 - JD 强调"可评估、持续调优"；规划 W5 原要求"审核 Agent 四维评分经 50 篇人工校准 ≥80%"。
 - 现状：Rubric 5 维有跑分，但**无"人工评分 vs Rubric 分"的对齐率实验**，LLM-as-judge 存在"自己评自己"的信任风险。
-- **已建工具链**：`tools/calibration/`（`extract_samples.py` 抽 13 条内容+评委五维分 → `score_sheet.html` 真人双盲打分 → `compute_alignment.py` 算 Spearman/相邻一致/偏差 → 校准报告+图）。**试跑（AGENT_PILOT 代理标注）已跑通**：整体 Spearman ρ=0.68、相邻一致率 89%、完全一致 54%；并发现评委在"事实准确性"系统性偏严（真人 3.62 vs 评委 2.46，偏差 +1.15）——对质量闸门是正向属性。
-- **待你做**：打开 `score_sheet.html` 对 13 条真人打分 → 导出 `human_scores.json` 覆盖试跑版 → 重跑 `compute_alignment.py` 即出**真人校准证据**。这步不依赖真实消费数据。
+- **已建工具链**：`tools/calibration/compute_alignment.py`（库内 `compute_alignment_core`，被校准路由直接调用）+ 正式控制台「人工校准」页（`/console/#calibrate`）。真人从控制台逐篇/批量打分，数据落 `human_calibrations` 表并自动聚合为「真人共识分」，后端实时算 Spearman/相邻一致/偏差并生成报告+图。**试跑（AGENT_PILOT 代理标注）已跑通**：整体 Spearman ρ=0.68、相邻一致率 89%、完全一致 54%；并发现评委在"事实准确性"系统性偏严（真人 3.62 vs 评委 2.46，偏差 +1.15）——对质量闸门是正向属性。
+- **待你做**：打开正式控制台 `/console/#calibrate`，以评审人身份（如 Strange）对内容逐篇或批量打分（0.5 半分 + 理由），提交即自动落库、累积、算对齐——**无需导出任何文件**。这步不依赖真实消费数据。
 
 **C. 真实消费数据闭环**
 - JD 要求"追踪点击率…持续调优"。
@@ -69,7 +69,7 @@
 | 优先级 | 动作 | 产出 | 工作量 |
 |---|---|---|---|
 | ✅ P0 | 工具调用型 Distributor（双轨 tool-calling） | Trace 可见的 function-call 节点 + 报告 | 已完成 |
-| ⏳ P0 | 真人打分替换试跑（打开 score_sheet.html → 导出 human_scores.json → 重跑 compute） | 真人校准报告，进面试弹药 | 小（~30min） |
+| ✅ P0 | 真人打分校准（控制台 /console/#calibrate 逐篇/批量打分，自动落库+聚合+对齐，无需导出文件） | 真人校准报告，进面试弹药 | 已完成 |
 | P1 | 90 秒 demo 视频 + 架构图 PNG | 投递物料 | 小 |
 | P1 | 简历量化三件套 | 简历/README | 小 |
 | P2 | revise 人审意见结构化沉淀 | 裁决数据集 | 中 |

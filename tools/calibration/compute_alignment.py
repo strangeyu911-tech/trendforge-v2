@@ -143,7 +143,7 @@ def main():
 
     human_path = Path(args.human)
     if not human_path.exists():
-        print(f"找不到 {human_path}。请先打开 score_sheet.html 打分并导出 human_scores.json。", file=sys.stderr)
+        print(f"找不到 {human_path}。请通过正式控制台 /console/#calibrate 提交真人打分（数据自动落库），或指定 --human 参数指向导出的评分文件。", file=sys.stderr)
         sys.exit(1)
 
     human_doc = json.loads(human_path.read_text(encoding="utf-8"))

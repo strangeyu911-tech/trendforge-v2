@@ -1280,7 +1280,7 @@ async function runAB() {
 })();
 
 /* ---------- 人工校准（Evaluate 段人机闭环） ----------
-   复用 score_sheet 的半分制 + 逐维理由逻辑，但跑在正式控制台上：
+   半分制 + 逐维理由逻辑，跑在正式控制台上（旧离线 score_sheet.html 已退役）：
    拉取待校准内容 → 真人打分（0.5 半分 + 理由）→ 提交后后端跑对齐计算 → 展示报告。 */
 const CAL_DIMS = [
   ['accuracy', '事实准确性'], ['angle', '角度新颖度'], ['readability', '可读性'],
@@ -1319,9 +1319,13 @@ async function calibrateView() {
         ? Object.values(s.human_avg).filter(v => typeof v === 'number') : [];
       const avgTxt = (s.n_raters && vals.length)
         ? ` · 均分 ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)}` : '';
-      html += `<div class="card">
-        <h3><span class="badge">${esc(s.market)}</span>${prior}${avgTxt} ${i + 1}. ${esc(s.title)}</h3>
-        <div class="excerpt">${esc(s.excerpt)}</div>${dims}</div>`;
+      html += `<div class="card" id="calcard-${esc(s.id)}">
+        <h3><span class="badge">${esc(s.market)}</span><span id="calbadge-${esc(s.id)}">${prior}${avgTxt}</span> ${i + 1}. ${esc(s.title)}</h3>
+        <div class="excerpt">${esc(s.excerpt)}</div>${dims}
+        <div class="card-actions">
+          <button class="btn sm" onclick="calSubmitOne('${esc(s.id)}')">提交此篇校准</button>
+          <span id="cal-msg-${esc(s.id)}" class="muted" style="font-size:12px"></span>
+        </div></div>`;
     });
     html += `<div style="margin:16px 0">
       <button class="btn" onclick="calSubmit()">提交校准</button>
@@ -1365,6 +1369,29 @@ async function calSubmit() {
       calShowReport();
     } else msg.textContent = '提交失败';
   } catch (e) { msg.textContent = '提交失败：' + e.message; }
+}
+async function calSubmitOne(id) {
+  const msg = document.getElementById('cal-msg-' + id);
+  const rater = (document.getElementById('cal-rater') || {}).value || 'HUMAN';
+  const rec = calScores[id];
+  if (!rec || !CAL_DIMS.every(([k]) => rec[k] && rec[k].score !== undefined)) {
+    if (msg) msg.textContent = '⚠️ 请先为这篇打完五维分';
+    return;
+  }
+  if (msg) msg.textContent = '提交中…';
+  try {
+    const r = await API.calibrationSubmit({ rater, scores: { [id]: rec } });
+    if (r.ok) {
+      const pc = r.per_content && r.per_content[id];
+      if (pc) {
+        const vals = Object.values(pc.avg).filter(v => typeof v === 'number');
+        const avgTxt = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '—';
+        const badge = document.getElementById('calbadge-' + id);
+        if (badge) badge.innerHTML = `<span class="badge green">已有 ${pc.n_raters} 人打分</span> · 均分 ${avgTxt}`;
+      }
+      if (msg) msg.innerHTML = `✅ 已保存（${esc(rater)}）· 整体 ρ=${r.overall_rho}`;
+    } else if (msg) msg.textContent = '提交失败';
+  } catch (e) { if (msg) msg.textContent = '提交失败：' + e.message; }
 }
 async function calShowReport() {
   const box = document.getElementById('cal-report');
