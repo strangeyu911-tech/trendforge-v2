@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from app.agents.base import RunContext
+from app.agents.base import RunContext, clean_ev
 from app.agents.editor import EditorAgent
 from app.agents.fact_checker import FactCheckerAgent
 from app.agents.format_adapter import FormatAdapterAgent
@@ -54,7 +54,7 @@ async def content_detail(content_id: str):
             raise HTTPException(404, "内容不存在")
         return {
             **_content_summary(c),
-            "brief": c.brief, "body": c.body, "evidences": c.evidences,
+            "brief": c.brief, "body": clean_ev(c.body), "evidences": c.evidences,
             "formats": c.formats, "distribution": c.distribution,
             "quality": c.quality, "decision_log": c.decision_log,
             "prompt_versions": c.prompt_versions, "task_id": c.task_id,
@@ -155,7 +155,7 @@ async def _revise_work(job_id: str, content_id: str) -> None:
 
             c.title = data["article"]["title"]
             c.summary = data["article"]["summary"]
-            c.body = data["article"]["body"]
+            c.body = clean_ev(data["article"]["body"])
             c.formats = data.get("formats", c.formats)
             c.quality = {"fact_check": data.get("fact_check", {}), **data.get("review", {})}
             c.quality["_revise"] = {"rounds": rounds, "at": datetime.utcnow().isoformat()}

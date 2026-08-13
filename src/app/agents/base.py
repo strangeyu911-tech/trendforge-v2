@@ -43,6 +43,7 @@ class Span:
     duration_ms: int = 0
     warnings: list[str] = field(default_factory=list)
     decision_reason: str = ""
+    tool_calls: list = field(default_factory=list)  # 工具调用往返（name/args/result/ms）
     started_at: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -124,6 +125,8 @@ class BaseAgent(ABC):
             if isinstance(result, dict) and result.get("_warnings"):
                 span.warnings = result.pop("_warnings")
                 span.status = "degraded"
+            if isinstance(result, dict) and result.get("_tool_calls"):
+                span.tool_calls = result.pop("_tool_calls")
             if self.prompt_name:
                 ctx.prompt_versions[self.name] = f"{self.prompt_name}@{get_pm().active_version(self.prompt_name)}"
         except Exception as e:

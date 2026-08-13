@@ -6,7 +6,7 @@
 
 ## The 0.5% Problem
 
-73% of everything an AI chatbot reads comes from just 0.5% of publishers. That's the headline finding from Content Trust Network's 2026 'LLM Citation Gravity' report [ev_001]. It means independent writers are practically invisible to AI assistants. But the same report also points to a counter-trend: a 42% spike in 'undeserved citations' — opportunities that large outlets miss. Even while AI tools save time, they introduce new classes of subtle errors [ev_001]. This is where the loophole opens. For anyone writing on Substack, Medium, or a niche blog, the numbers aren't bad news; they're a map. The top 0.5% of publishers own the generic head terms, but the long tail of specific, question-based queries remains wide open. Independent writers who position themselves to answer those queries can become the unlikely source that AI assistants cite.
+73% of everything an AI chatbot reads comes from just 0.5% of publishers. That's the headline finding from Content Trust Network's 2026 'LLM Citation Gravity' report. It means independent writers are practically invisible to AI assistants. But the same report also points to a counter-trend: a 42% spike in 'undeserved citations' — opportunities that large outlets miss. Even while AI tools save time, they introduce new classes of subtle errors. This is where the loophole opens. For anyone writing on Substack, Medium, or a niche blog, the numbers aren't bad news; they're a map. The top 0.5% of publishers own the generic head terms, but the long tail of specific, question-based queries remains wide open. Independent writers who position themselves to answer those queries can become the unlikely source that AI assistants cite.
 
 ## The Long-Tail Niche
 
@@ -18,7 +18,7 @@ So how do you actually get cited? Step one: put the direct answer at the very to
 
 ## Accountability as Opportunity
 
-The report's author, Daniel Okafor, puts it plainly: 'The debate has shifted from adoption to accountability' [ev_002]. That shift is already reshaping how AI companies choose their sources. As regulators like the EU begin enforcing transparency rules for autonomous systems [ev_004], AI makers need sources they can defend. Independent writers who produce accurate, well-structured, and verifiable content become low-risk choices for citation. In a world where every AI output is being audited, a small blog that states facts clearly is more valuable than a giant outlet that buries them. This is the moment to become the reliable voice in your niche. The citation data proves the opportunity; the accountability trend tells you why it will last.
+The report's author, Daniel Okafor, puts it plainly: 'The debate has shifted from adoption to accountability'. That shift is already reshaping how AI companies choose their sources. As regulators like the EU begin enforcing transparency rules for autonomous systems, AI makers need sources they can defend. Independent writers who produce accurate, well-structured, and verifiable content become low-risk choices for citation. In a world where every AI output is being audited, a small blog that states facts clearly is more valuable than a giant outlet that buries them. This is the moment to become the reliable voice in your niche. The citation data proves the opportunity; the accountability trend tells you why it will last.
 
 ## Play the Long Tail, Not the Head
 
