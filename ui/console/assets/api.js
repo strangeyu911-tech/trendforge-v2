@@ -52,4 +52,8 @@ const API = {
   promptSuggestionReject: (id) => req(`/prompts/suggestions/${id}/reject`, { method: 'POST' }),
   promptFeedback: (market) => req(`/prompts/feedback?market=${market}`, { method: 'POST' }),
   promptABRun: (body) => req('/prompts/ab/run', { method: 'POST', body: JSON.stringify(body) }),
+  // 人工校准（Evaluate 段人机闭环）
+  calibrationSamples: () => req('/calibration/samples'),
+  calibrationSubmit: (body) => req('/calibration/scores', { method: 'POST', body: JSON.stringify(body) }),
+  calibrationReport: () => req('/calibration/report'),
 };
