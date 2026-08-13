@@ -1,0 +1,171 @@
+{
+  "c0ab4c4b-6882-43f5-b1d0-2ddbf8294836": {
+    "market": "CN",
+    "status": "published",
+    "title": "文心5.0发布，职场人如何用“技能升级”对冲AI焦虑？",
+    "judge_scores": {
+      "accuracy": 4.0,
+      "angle": 5.0,
+      "readability": 4.0,
+      "local_fit": 5.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 4.4
+  },
+  "0ecdee9f-60d2-4f21-b21f-b93c2d4644a2": {
+    "market": "JP",
+    "status": "published",
+    "title": "月間2.2億件のクエリが示すAI検索の実力——Googleとの使い分けと日本企業への示唆",
+    "judge_scores": {
+      "accuracy": 3.0,
+      "angle": 4.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 3.8
+  },
+  "69749c21-0f87-4b32-86e5-dc653deca4bc": {
+    "market": "US",
+    "status": "published",
+    "title": "Apple's $1,999 Foldable: The Data Behind the Premium Price",
+    "judge_scores": {
+      "accuracy": 3.0,
+      "angle": 2.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 3.0
+    },
+    "judge_avg": 3.2
+  },
+  "b340d4c1-4fa7-4e5f-b8dd-d16cfbbcb9a8": {
+    "market": "US",
+    "status": "published",
+    "title": "The Meta AI Breach Wasn't a Data Leak—It Was a Takeover: A 5-Step Threat Model for Agentic Systems",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 5.0,
+      "readability": 4.0,
+      "local_fit": 5.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 4.0
+  },
+  "20062df3-a783-414a-b0bb-e9f86474d5df": {
+    "market": "JP",
+    "status": "published",
+    "title": "AIエージェント導入時の安全設計：日本企業が知るべきリスクと対策",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 4.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 3.0
+    },
+    "judge_avg": 3.4
+  },
+  "7129bdfe-033c-4934-bf70-1729d91ab196": {
+    "market": "KR",
+    "status": "published",
+    "title": "AI 에이전트가 API 키를 유출했다? 놓치기 쉬운 보안 설정 3가지와 효율 운영법",
+    "judge_scores": {
+      "accuracy": 3.0,
+      "angle": 4.0,
+      "readability": 3.0,
+      "local_fit": 4.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 3.6
+  },
+  "73f79a8d-ec0d-4010-8505-5e52e3703dd9": {
+    "market": "BR",
+    "status": "rejected",
+    "title": "Erro: Evidências não compatíveis com o tema",
+    "judge_scores": {
+      "accuracy": 1.0,
+      "angle": 1.0,
+      "readability": 2.0,
+      "local_fit": 1.0,
+      "engagement": 1.0
+    },
+    "judge_avg": 1.2
+  },
+  "1b7b7963-eae5-4d7a-a49a-6c0be640ac26": {
+    "market": "CN",
+    "status": "published",
+    "title": "标了“AI生成”就能放心转？新规之下，个人核查才是真功夫",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 4.0,
+      "readability": 3.0,
+      "local_fit": 4.0,
+      "engagement": 3.0
+    },
+    "judge_avg": 3.2
+  },
+  "0334ca42-715b-41c1-ab6a-ca26d0c79192": {
+    "market": "US",
+    "status": "published",
+    "title": "AI coding tools：关键进展",
+    "judge_scores": {
+      "accuracy": 3.0,
+      "angle": 2.0,
+      "readability": 1.0,
+      "local_fit": 2.0,
+      "engagement": 2.0
+    },
+    "judge_avg": 2.0
+  },
+  "7d4eb96b-23c8-4324-a6da-4e39beb736c9": {
+    "market": "US",
+    "status": "published",
+    "title": "AI Coding Assistants Are Rewiring the Junior Developer Career Path",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 4.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 3.0
+    },
+    "judge_avg": 3.4
+  },
+  "45f05216-f919-463c-b1d0-f5fa342a23ad": {
+    "market": "US",
+    "status": "published",
+    "title": "AI Coding Assistants Are Rewriting the Junior Developer Career Path",
+    "judge_scores": {
+      "accuracy": 3.0,
+      "angle": 4.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 3.8
+  },
+  "2e64ebff-9d6e-4474-ac86-97889084792a": {
+    "market": "US",
+    "status": "published",
+    "title": "The Citation Gravity Loophole: Why Independent Writers Should Target AI's Long Tail",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 4.0,
+      "readability": 4.0,
+      "local_fit": 4.0,
+      "engagement": 4.0
+    },
+    "judge_avg": 3.6
+  },
+  "b41a0c5c-053b-4477-aa55-6da25636d530": {
+    "market": "US",
+    "status": "published",
+    "title": "AI Search Isn't Killing Your Traffic — It's Rerouting It. Here's How to Get Cited.",
+    "judge_scores": {
+      "accuracy": 2.0,
+      "angle": 4.0,
+      "readability": 3.0,
+      "local_fit": 4.0,
+      "engagement": 3.0
+    },
+    "judge_avg": 3.2
+  }
+}

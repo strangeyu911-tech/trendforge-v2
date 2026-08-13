@@ -2,7 +2,7 @@
 const root = document.getElementById('view-root');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView, analytics: analyticsView, closedloop: closedLoopView };
+const VIEWS = { overview, pipeline, contents, markets, eval: evalView, kb: kbView, analytics: analyticsView, calibrate: calibrateView, closedloop: closedLoopView };
 
 function route() {
   const hash = location.hash.slice(1) || 'overview';
@@ -1278,3 +1278,130 @@ async function runAB() {
     el.classList.add('err');
   }
 })();
+
+/* ---------- 人工校准（Evaluate 段人机闭环） ----------
+   复用 score_sheet 的半分制 + 逐维理由逻辑，但跑在正式控制台上：
+   拉取待校准内容 → 真人打分（0.5 半分 + 理由）→ 提交后后端跑对齐计算 → 展示报告。 */
+const CAL_DIMS = [
+  ['accuracy', '事实准确性'], ['angle', '角度新颖度'], ['readability', '可读性'],
+  ['local_fit', '本地化契合'], ['engagement', '吸引力/传播潜力'],
+];
+let calScores = {};
+
+async function calibrateView() {
+  root.innerHTML = '<div class="loading">加载待校准内容…</div>';
+  try {
+    const { samples } = await API.calibrationSamples();
+    calScores = {};
+    let html = `<div class="panel"><h2>🔬 人工校准 · LLM 评委对齐</h2>
+      <p class="muted">逐条阅读内容全文，按五维直觉打分（1–5，支持 0.5 半分）。评委分对你不可见（避免锚定）。
+      完成后点「提交校准」，后端将你的打分与 EditorAgent 评委分做 Spearman 对齐并生成报告。</p>
+      <div style="margin:10px 0 4px">评审人：
+        <input list="cal-rater-list" id="cal-rater" class="input" value="Strange" style="width:200px" placeholder="输入或选择评审人">
+        <datalist id="cal-rater-list"><option value="Strange"><option value="评审B"><option value="评审C"></datalist>
+        <span class="muted" style="font-size:12px">（同名续打会覆盖其旧分；不同评审人之间累积取平均）</span>
+      </div>
+      <div id="cal-progress" class="muted"></div></div>`;
+    samples.forEach((s, i) => {
+      let dims = '';
+      CAL_DIMS.forEach(([k, label]) => {
+        dims += `<div class="dimblk">
+          <div class="dim"><label>${label}</label>
+            <input type="range" min="1" max="5" step="0.5" value="3" data-id="${esc(s.id)}" data-dim="${k}" oninput="calSet(this)">
+            <span class="val" id="cv-${esc(s.id)}-${k}">3</span></div>
+          <textarea class="reason" placeholder="这一维的打分理由（可选）" data-id="${esc(s.id)}" data-dim="${k}" oninput="calReason(this)"></textarea>
+        </div>`;
+      });
+      const prior = s.n_raters
+        ? `<span class="badge green">已有 ${s.n_raters} 人打分</span>`
+        : '';
+      const vals = (s.human_avg && typeof s.human_avg === 'object')
+        ? Object.values(s.human_avg).filter(v => typeof v === 'number') : [];
+      const avgTxt = (s.n_raters && vals.length)
+        ? ` · 均分 ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)}` : '';
+      html += `<div class="card">
+        <h3><span class="badge">${esc(s.market)}</span>${prior}${avgTxt} ${i + 1}. ${esc(s.title)}</h3>
+        <div class="excerpt">${esc(s.excerpt)}</div>${dims}</div>`;
+    });
+    html += `<div style="margin:16px 0">
+      <button class="btn" onclick="calSubmit()">提交校准</button>
+      <button class="btn ghost" onclick="calShowReport()">查看最新报告</button>
+      <span id="cal-msg" class="muted"></span></div>
+      <div id="cal-report"></div>`;
+    root.innerHTML = html;
+    calProgress();
+  } catch (e) { root.innerHTML = errBox(e); }
+}
+
+function calSet(el) {
+  const id = el.dataset.id, dim = el.dataset.dim;
+  calScores[id] = calScores[id] || {};
+  calScores[id][dim] = { score: parseFloat(el.value), reason: (calScores[id][dim] || {}).reason || '' };
+  document.getElementById(`cv-${id}-${dim}`).textContent = el.value;
+  calProgress();
+}
+function calReason(el) {
+  const id = el.dataset.id, dim = el.dataset.dim;
+  calScores[id] = calScores[id] || {};
+  const cur = calScores[id][dim] || { score: 3 };
+  calScores[id][dim] = { score: cur.score, reason: el.value };
+}
+function calProgress() {
+  const total = Object.keys(calScores).length;
+  const done = Object.values(calScores).filter(s => CAL_DIMS.every(([k]) => s[k] && s[k].score !== undefined)).length;
+  const el = document.getElementById('cal-progress');
+  if (el) el.innerHTML = `已打分 <b>${done}</b> / ${total} 条`;
+}
+async function calSubmit() {
+  const msg = document.getElementById('cal-msg');
+  const rater = (document.getElementById('cal-rater') || {}).value || 'HUMAN';
+  msg.textContent = '提交中…';
+  try {
+    const r = await API.calibrationSubmit({ rater, scores: calScores });
+    if (r.ok) {
+      const nCal = r.per_content ? Object.keys(r.per_content).length : (r.n || 0);
+      msg.innerHTML = `✅ 已保存（评审人 <b>${esc(rater)}</b>）· 共 <b>${nCal}</b> 条内容已校准`
+        + (r.overall_rho != null ? ` · 整体 Spearman ρ=<b>${r.overall_rho}</b>，相邻一致 <b>${r.overall_adj}</b>` : '');
+      calShowReport();
+    } else msg.textContent = '提交失败';
+  } catch (e) { msg.textContent = '提交失败：' + e.message; }
+}
+async function calShowReport() {
+  const box = document.getElementById('cal-report');
+  if (!box) return;
+  box.innerHTML = '<div class="loading">加载报告…</div>';
+  try {
+    const r = await API.calibrationReport();
+    let h = `<div class="panel"><div class="md">${mdReport(r.markdown)}</div>`;
+    if (r.chart) h += `<div class="chart-wrap">${r.chart}</div>`;
+    h += `</div>`;
+    box.innerHTML = h;
+  } catch (e) { box.innerHTML = `<div class="muted">尚无报告（${esc(e.message)}）。先提交一次真人打分即可生成。</div>`; }
+}
+/* 极简 markdown → HTML（标题/表格/列表/引用/粗体/分段） */
+function mdReport(md) {
+  const lines = (md || '').split('\n');
+  let html = '', inTable = false, tableBuf = [];
+  const flushTable = () => {
+    if (!tableBuf.length) return;
+    html += '<table class="grid">' + tableBuf.map(r =>
+      '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</table>';
+    tableBuf = []; inTable = false;
+  };
+  for (const line of lines) {
+    if (line.startsWith('|')) {
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      if (cells.every(c => /^-+$/.test(c))) { continue; }
+      tableBuf.push(cells); inTable = true; continue;
+    }
+    flushTable();
+    if (line.startsWith('### ')) html += `<h4>${esc(line.slice(4))}</h4>`;
+    else if (line.startsWith('## ')) html += `<h3>${esc(line.slice(3))}</h3>`;
+    else if (line.startsWith('# ')) html += `<h2>${esc(line.slice(2))}</h2>`;
+    else if (line.startsWith('> ')) html += `<blockquote>${esc(line.slice(2))}</blockquote>`;
+    else if (line.startsWith('- ')) html += `<li>${esc(line.slice(2))}</li>`;
+    else if (line.trim()) html += `<p>${esc(line).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</p>`;
+  }
+  flushTable();
+  return html;
+}

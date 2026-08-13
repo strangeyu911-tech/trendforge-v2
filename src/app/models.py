@@ -127,7 +127,27 @@ class Content(Base):
     translation: Mapped[dict] = mapped_column(JSON, default=dict)
     # 驱动本内容的真实信号溯源（SignalScout 实时拉取，含来源/时间/互动/原文链接）
     signals: Mapped[list] = mapped_column(JSON, default=list)
+    # 真人校准聚合均值：{accuracy,angle,readability,local_fit,engagement 均值, n_raters, updated_at}
+    # 由 human_calibrations 表聚合而来，前端/详情页直接读，避免每次现算
+    human_score_avg: Mapped[dict] = mapped_column(JSON, default=dict)
     is_fallback: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class HumanCalibration(Base):
+    """真人校准分：每行 = 某 rater 对某内容的一次五维打分（append-only，聚合时取每人最新）。
+
+    - content_id 外键关联 contents；rater 为评审人标识（去重键之一）。
+    - 同一 rater 续打 = 再 INSERT 一行，聚合按 (content_id, rater) 取 created_at 最新 → 实现「每人留最新」。
+    - 不同 rater 之间累积；对齐时按 content 对 distinct rater 的最新分逐维取均值 = 真人共识分。
+    """
+    __tablename__ = "human_calibrations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    content_id: Mapped[str] = mapped_column(ForeignKey("contents.id"), index=True)
+    rater: Mapped[str] = mapped_column(String(64), index=True)
+    scores: Mapped[dict] = mapped_column(JSON, default=dict)        # {dim: number}
+    reasons: Mapped[dict] = mapped_column(JSON, default=dict)        # {dim: string}
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
@@ -219,6 +239,16 @@ async def migrate_db() -> None:
             await conn.execute(text("ALTER TABLE contents ADD COLUMN signals JSON"))
         await conn.execute(text(
             "UPDATE contents SET signals = '[]' WHERE signals IS NULL"))
+        # contents.human_score_avg：真人校准聚合均值（每维均值 + n_raters）
+        if "human_score_avg" not in ccols:
+            await conn.execute(text("ALTER TABLE contents ADD COLUMN human_score_avg JSON"))
+        await conn.execute(text(
+            "UPDATE contents SET human_score_avg = '{}' WHERE human_score_avg IS NULL"))
+        # human_calibrations 表（全新，create_all 会建；此处 CREATE TABLE IF NOT EXISTS 兼容已存在库）
+        await conn.execute(text(
+            "CREATE TABLE IF NOT EXISTS human_calibrations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, content_id VARCHAR(36), "
+            "rater VARCHAR(64), scores JSON, reasons JSON, created_at TIMESTAMP)"))
 
         # prompts：M3 闭环版本治理扩展列
         res = await conn.execute(text("PRAGMA table_info(prompts)"))

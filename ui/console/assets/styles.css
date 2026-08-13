@@ -168,3 +168,31 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
 .diff { background:#0f1526; color:#c8d3ff; padding:12px 14px; border-radius:8px; font-size:11.5px;
         overflow:auto; max-height:360px; margin-top:10px; white-space:pre; line-height:1.5;
         font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* ---------- 人工校准（Evaluate 段人机闭环） ---------- */
+.dimblk { margin:8px 0 2px; }
+.dim { display:flex; align-items:center; gap:10px; margin:4px 0; }
+.dim label { width:96px; font-size:13px; color:#55607a; }
+.dim input[type=range] { flex:1; }
+.dim .val { width:34px; text-align:center; font-weight:600; color:#4338ca; }
+.reason { width:100%; font-size:12px; margin:2px 0 4px; box-sizing:border-box; resize:vertical;
+          min-height:32px; border:1px solid #e5e7eb; border-radius:6px; padding:5px 7px;
+          font-family:inherit; color:#374151; }
+.excerpt { font-size:13px; color:#374151; background:#f8fafc; border-left:3px solid #c7d2fe;
+           padding:8px 10px; margin:8px 0; max-height:320px; overflow:auto; line-height:1.7; white-space:pre-wrap; }
+.md h2 { font-size:18px; margin:14px 0 6px; }
+.md h3 { font-size:15px; margin:12px 0 4px; color:#2f3a52; }
+.md h4 { font-size:13.5px; margin:10px 0 3px; color:#374151; }
+.md p { margin:5px 0; line-height:1.6; }
+.md ul { margin:4px 0 4px 18px; }
+.md li { margin:2px 0; }
+.md blockquote { margin:8px 0; padding:8px 12px; background:#f4f8ff; border-left:3px solid #4338ca;
+                 color:#33415c; border-radius:0 6px 6px 0; font-size:13px; }
+.md table.grid { border-collapse:collapse; margin:8px 0; width:100%; font-size:12.5px; }
+.md table.grid td { border:1px solid #e5e7eb; padding:5px 8px; }
+.chart-wrap { margin:10px 0; }
+.chart-wrap svg { width:100%; height:auto; background:#fff; border:1px solid #eef0f3; border-radius:8px; }
+/* 校准页徽标 */
+.badge { display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px;
+         background:#eef0f3; color:#444; margin-right:4px; }
+.badge.green { background:#dcfce7; color:#166534; }

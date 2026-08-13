@@ -1,0 +1,302 @@
+{
+  "__meta": {
+    "rater": "HUMAN",
+    "scale": "1-5 (支持0.5半分)",
+    "dims": [
+      "accuracy",
+      "angle",
+      "readability",
+      "local_fit",
+      "engagement"
+    ],
+    "has_reasons": true
+  },
+  "scores": {
+    "c0ab4c4b-6882-43f5-b1d0-2ddbf8294836": {
+      "accuracy": {
+        "score": 3.0,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.0,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.0,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.0,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.0,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "0ecdee9f-60d2-4f21-b21f-b93c2d4644a2": {
+      "accuracy": {
+        "score": 3.5,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.5,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.5,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.5,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.5,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "69749c21-0f87-4b32-86e5-dc653deca4bc": {
+      "accuracy": {
+        "score": 4.0,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.0,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.0,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.0,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.0,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "b340d4c1-4fa7-4e5f-b8dd-d16cfbbcb9a8": {
+      "accuracy": {
+        "score": 4.5,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.5,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.5,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.5,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.5,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "20062df3-a783-414a-b0bb-e9f86474d5df": {
+      "accuracy": {
+        "score": 3.0,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.0,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.0,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.0,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.0,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "7129bdfe-033c-4934-bf70-1729d91ab196": {
+      "accuracy": {
+        "score": 3.5,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.5,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.5,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.5,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.5,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "73f79a8d-ec0d-4010-8505-5e52e3703dd9": {
+      "accuracy": {
+        "score": 4.0,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.0,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.0,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.0,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.0,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "1b7b7963-eae5-4d7a-a49a-6c0be640ac26": {
+      "accuracy": {
+        "score": 4.5,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.5,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.5,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.5,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.5,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "0334ca42-715b-41c1-ab6a-ca26d0c79192": {
+      "accuracy": {
+        "score": 3.0,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.0,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.0,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.0,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.0,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "7d4eb96b-23c8-4324-a6da-4e39beb736c9": {
+      "accuracy": {
+        "score": 3.5,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.5,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.5,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.5,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.5,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    },
+    "45f05216-f919-463c-b1d0-f5fa342a23ad": {
+      "accuracy": {
+        "score": 4.0,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.0,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.0,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.0,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.0,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "2e64ebff-9d6e-4474-ac86-97889084792a": {
+      "accuracy": {
+        "score": 4.5,
+        "reason": "测试理由-1：该维表现较好"
+      },
+      "angle": {
+        "score": 4.5,
+        "reason": "测试理由-2：该维表现较好"
+      },
+      "readability": {
+        "score": 4.5,
+        "reason": "测试理由-3：该维表现较好"
+      },
+      "local_fit": {
+        "score": 4.5,
+        "reason": "测试理由-4：该维表现较好"
+      },
+      "engagement": {
+        "score": 4.5,
+        "reason": "测试理由-5：该维表现较好"
+      }
+    },
+    "b41a0c5c-053b-4477-aa55-6da25636d530": {
+      "accuracy": {
+        "score": 3.0,
+        "reason": "测试理由-1：该维表现中等"
+      },
+      "angle": {
+        "score": 3.0,
+        "reason": "测试理由-2：该维表现中等"
+      },
+      "readability": {
+        "score": 3.0,
+        "reason": "测试理由-3：该维表现中等"
+      },
+      "local_fit": {
+        "score": 3.0,
+        "reason": "测试理由-4：该维表现中等"
+      },
+      "engagement": {
+        "score": 3.0,
+        "reason": "测试理由-5：该维表现中等"
+      }
+    }
+  }
+}
