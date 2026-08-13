@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models import Content, HumanCalibration, SessionLocal
 
@@ -170,6 +170,13 @@ async def calibration_scores(payload: dict):
         raise HTTPException(400, "scores 为空")
 
     async with SessionLocal() as session:
+        # 防御性建表：极端情况下（部署迁移未覆盖 / 冷启动竞态）human_calibrations
+        # 缺失会让 INSERT 直接 500。这里幂等兜底，保证表一定存在。
+        await session.execute(text(
+            "CREATE TABLE IF NOT EXISTS human_calibrations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, content_id VARCHAR(36), "
+            "rater VARCHAR(64), scores JSON, reasons JSON, created_at TIMESTAMP)"))
+        await session.commit()
         for cid, dims in scores.items():
             if not isinstance(dims, dict):
                 continue
@@ -178,7 +185,14 @@ async def calibration_scores(payload: dict):
                   for d in DIMS if d in dims}
             session.add(HumanCalibration(content_id=cid, rater=rater, scores=sc, reasons=rs))
         await session.commit()
-        summary, per_content = await _recompute_alignment(session)
+        try:
+            summary, per_content = await _recompute_alignment(session)
+        except Exception as e:  # 计算/写盘异常不应让提交整体 500
+            import sys
+            print(f"[calibration] 对齐计算跳过: {e!r}", file=sys.stderr)
+            summary, per_content = ({"overall_rho": None, "overall_adj": None,
+                                     "overall_exact": None, "n": 0, "common": [],
+                                     "compute_error": str(e)}, {})
 
     return {"ok": True, **summary, "per_content": per_content}
 

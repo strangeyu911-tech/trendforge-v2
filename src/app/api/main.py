@@ -1,7 +1,8 @@
 """TrendForge V2 API 入口"""
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import analytics, calibration, contents, kb, misc, pipeline, prompts
@@ -12,6 +13,15 @@ app = FastAPI(title="TrendForge V2 — AI Native 内容供给引擎", version="2
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def _unhandled(request, exc):
+    # 未捕获异常以 JSON 返回（CORSMiddleware 会补 CORS 头），
+    # 避免浏览器把 500 吞成 "Failed to fetch" 无法排查。
+    if isinstance(exc, HTTPException):
+        raise exc
+    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
 
 
 @app.on_event("startup")

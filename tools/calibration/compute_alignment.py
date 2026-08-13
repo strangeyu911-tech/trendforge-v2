@@ -121,9 +121,14 @@ def compute_alignment_core(human_map: dict, judge_map: dict, meta: dict,
             "judge_avg": round(sum(float(judge_map[c][d]) for d in DIMS) / len(DIMS), 2),
         }
 
-    write_report(here, common, per_dim, overall_rho, overall_adj, overall_exact,
-                 rater_label, human_scores_for_report, judge_backup)
-    write_chart(here, per_dim, overall_rho, overall_adj, overall_exact, len(common))
+    # 写盘作为副作用：部署环境可能只读，计算本身已完成，仅报告文件落盘失败则忽略
+    try:
+        write_report(here, common, per_dim, overall_rho, overall_adj, overall_exact,
+                     rater_label, human_scores_for_report, judge_backup)
+        write_chart(here, per_dim, overall_rho, overall_adj, overall_exact, len(common))
+    except OSError as e:
+        import sys
+        print(f"[compute_alignment] 报告写盘跳过（部署环境可能只读）: {e}", file=sys.stderr)
 
     return {
         "per_dim": per_dim,
