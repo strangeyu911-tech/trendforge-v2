@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.angle_editor import AngleEditorAgent
 from app.agents.audience_insight import AudienceInsightAgent
-from app.agents.base import RunContext
+from app.agents.base import RunContext, clean_ev
 from app.agents.distributor import DistributorAgent
 from app.agents.editor import EditorAgent
 from app.agents.fact_checker import FactCheckerAgent
@@ -111,7 +111,7 @@ async def run_pipeline(market_code: str) -> dict:
                 id=str(uuid.uuid4()), task_id=task.id, market=market.code,
                 language=market.language, status="published",
                 brief=data["brief"], title=article["title"], summary=article.get("summary", ""),
-                body=article["body"], evidences=data["evidences"],
+                body=clean_ev(article["body"]), evidences=data["evidences"],
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
                 quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
                          "topic_guard": data.get("topic_guard", {}),
@@ -139,7 +139,7 @@ async def run_pipeline(market_code: str) -> dict:
                     language=market.language, status="rejected",
                     brief=data.get("brief"), title=article.get("title", "(无标题)"),
                     summary=article.get("summary", ""),
-                    body=article.get("body"), evidences=data.get("evidences"),
+                    body=clean_ev(article.get("body")), evidences=data.get("evidences"),
                     quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
                              "topic_guard": data.get("topic_guard", {}),
                              "evidence_guard": data.get("evidence_guard", {})},
