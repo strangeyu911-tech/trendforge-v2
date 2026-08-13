@@ -1287,15 +1287,17 @@ const CAL_DIMS = [
   ['local_fit', '本地化契合'], ['engagement', '吸引力/传播潜力'],
 ];
 let calScores = {};
+let calTotal = 0;
 
 async function calibrateView() {
   root.innerHTML = '<div class="loading">加载待校准内容…</div>';
   try {
     const { samples } = await API.calibrationSamples();
     calScores = {};
+    calTotal = samples.length;
     let html = `<div class="panel"><h2>🔬 人工校准 · LLM 评委对齐</h2>
       <p class="muted">逐条阅读内容全文，按五维直觉打分（1–5，支持 0.5 半分）。评委分对你不可见（避免锚定）。
-      完成后点「提交校准」，后端将你的打分与 EditorAgent 评委分做 Spearman 对齐并生成报告。</p>
+      每篇五维都评完会自动标记为「已评」；最后点页面底部的「提交 N 篇已评」即可——后端将你的打分与 EditorAgent 评委分做 Spearman 对齐并生成报告。可只评几篇就提交。</p>
       <div style="margin:10px 0 4px">评审人：
         <input list="cal-rater-list" id="cal-rater" class="input" value="Strange" style="width:200px" placeholder="输入或选择评审人">
         <datalist id="cal-rater-list"><option value="Strange"><option value="评审B"><option value="评审C"></datalist>
@@ -1307,7 +1309,7 @@ async function calibrateView() {
       CAL_DIMS.forEach(([k, label]) => {
         dims += `<div class="dimblk">
           <div class="dim"><label>${label}</label>
-            <input type="range" min="1" max="5" step="0.5" value="3" data-id="${esc(s.id)}" data-dim="${k}" oninput="calSet(this)">
+            <div class="dim-range-wrap"><input type="range" class="cal-range" min="1" max="5" step="0.5" value="3" data-id="${esc(s.id)}" data-dim="${k}" oninput="calSet(this)"></div>
             <span class="val" id="cv-${esc(s.id)}-${k}">3</span></div>
           <textarea class="reason" placeholder="这一维的打分理由（可选）" data-id="${esc(s.id)}" data-dim="${k}" oninput="calReason(this)"></textarea>
         </div>`;
@@ -1320,19 +1322,19 @@ async function calibrateView() {
       const avgTxt = (s.n_raters && vals.length)
         ? ` · 均分 ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)}` : '';
       html += `<div class="card" id="calcard-${esc(s.id)}">
-        <h3><span class="badge">${esc(s.market)}</span><span id="calbadge-${esc(s.id)}">${prior}${avgTxt}</span> ${i + 1}. ${esc(s.title)}</h3>
+        <h3><span class="badge">${esc(s.market)}</span><span id="calmeta-${esc(s.id)}">${prior}${avgTxt}</span> ${i + 1}. ${esc(s.title)}</h3>
         <div class="excerpt">${esc(s.excerpt)}</div>${dims}
         <div class="card-actions">
-          <button class="btn sm" onclick="calSubmitOne('${esc(s.id)}')">提交此篇校准</button>
-          <span id="cal-msg-${esc(s.id)}" class="muted" style="font-size:12px"></span>
+          <span id="calbadge-${esc(s.id)}" class="badge">待评</span>
         </div></div>`;
     });
-    html += `<div style="margin:16px 0">
-      <button class="btn" onclick="calSubmit()">提交校准</button>
+    html += `<div style="margin:16px 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+      <button class="btn" id="cal-submit-btn" onclick="calSubmit()">提交 0 篇已评</button>
       <button class="btn ghost" onclick="calShowReport()">查看最新报告</button>
       <span id="cal-msg" class="muted"></span></div>
       <div id="cal-report"></div>`;
     root.innerHTML = html;
+    document.querySelectorAll('.cal-range').forEach(calFill);
     calProgress();
   } catch (e) { root.innerHTML = errBox(e); }
 }
@@ -1342,6 +1344,7 @@ function calSet(el) {
   calScores[id] = calScores[id] || {};
   calScores[id][dim] = { score: parseFloat(el.value), reason: (calScores[id][dim] || {}).reason || '' };
   document.getElementById(`cv-${id}-${dim}`).textContent = el.value;
+  calFill(el);
   calProgress();
 }
 function calReason(el) {
@@ -1351,17 +1354,42 @@ function calReason(el) {
   calScores[id][dim] = { score: cur.score, reason: el.value };
 }
 function calProgress() {
-  const total = Object.keys(calScores).length;
-  const done = Object.values(calScores).filter(s => CAL_DIMS.every(([k]) => s[k] && s[k].score !== undefined)).length;
+  const total = calTotal || 0;
+  let done = 0;
+  const ids = Object.keys(calScores);
+  for (const id of ids) {
+    const complete = CAL_DIMS.every(([k]) => calScores[id][k] && calScores[id][k].score !== undefined);
+    if (complete) done++;
+    const badge = document.getElementById('calbadge-' + id);
+    if (badge) badge.innerHTML = complete
+      ? '<span class="badge green">✓ 已评</span>'
+      : '<span class="badge">评分中</span>';
+  }
   const el = document.getElementById('cal-progress');
-  if (el) el.innerHTML = `已打分 <b>${done}</b> / ${total} 条`;
+  if (el) el.innerHTML = `已评 <b>${done}</b> / ${total} 条`;
+  const btn = document.getElementById('cal-submit-btn');
+  if (btn) btn.textContent = `提交 ${done} 篇已评`;
+}
+function calFill(el) {
+  const min = 1, max = 5;
+  const p = ((parseFloat(el.value) - min) / (max - min)) * 100;
+  el.style.background = `linear-gradient(to right, #4338ca 0%, #4338ca ${p}%, #e5e7eb ${p}%, #e5e7eb 100%)`;
 }
 async function calSubmit() {
   const msg = document.getElementById('cal-msg');
   const rater = (document.getElementById('cal-rater') || {}).value || 'HUMAN';
+  const payload = {};
+  for (const id in calScores) {
+    if (CAL_DIMS.every(([k]) => calScores[id][k] && calScores[id][k].score !== undefined))
+      payload[id] = calScores[id];
+  }
+  if (!Object.keys(payload).length) {
+    if (msg) msg.textContent = '⚠️ 还没有任何一篇完成五维评分（每维都要打分）';
+    return;
+  }
   msg.textContent = '提交中…';
   try {
-    const r = await API.calibrationSubmit({ rater, scores: calScores });
+    const r = await API.calibrationSubmit({ rater, scores: payload });
     if (r.ok) {
       const nCal = r.per_content ? Object.keys(r.per_content).length : (r.n || 0);
       msg.innerHTML = `✅ 已保存（评审人 <b>${esc(rater)}</b>）· 共 <b>${nCal}</b> 条内容已校准`
@@ -1369,29 +1397,6 @@ async function calSubmit() {
       calShowReport();
     } else msg.textContent = '提交失败';
   } catch (e) { msg.textContent = '提交失败：' + e.message; }
-}
-async function calSubmitOne(id) {
-  const msg = document.getElementById('cal-msg-' + id);
-  const rater = (document.getElementById('cal-rater') || {}).value || 'HUMAN';
-  const rec = calScores[id];
-  if (!rec || !CAL_DIMS.every(([k]) => rec[k] && rec[k].score !== undefined)) {
-    if (msg) msg.textContent = '⚠️ 请先为这篇打完五维分';
-    return;
-  }
-  if (msg) msg.textContent = '提交中…';
-  try {
-    const r = await API.calibrationSubmit({ rater, scores: { [id]: rec } });
-    if (r.ok) {
-      const pc = r.per_content && r.per_content[id];
-      if (pc) {
-        const vals = Object.values(pc.avg).filter(v => typeof v === 'number');
-        const avgTxt = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '—';
-        const badge = document.getElementById('calbadge-' + id);
-        if (badge) badge.innerHTML = `<span class="badge green">已有 ${pc.n_raters} 人打分</span> · 均分 ${avgTxt}`;
-      }
-      if (msg) msg.innerHTML = `✅ 已保存（${esc(rater)}）· 整体 ρ=${r.overall_rho}`;
-    } else if (msg) msg.textContent = '提交失败';
-  } catch (e) { if (msg) msg.textContent = '提交失败：' + e.message; }
 }
 async function calShowReport() {
   const box = document.getElementById('cal-report');
