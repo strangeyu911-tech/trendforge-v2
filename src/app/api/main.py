@@ -35,6 +35,10 @@ async def startup() -> None:
     if not DB_PATH.exists() and snapshot.exists():
         shutil.copy2(snapshot, DB_PATH)
     await seed_all()
+    # 部署/重启后，DB 中仍标记 running 的后台任务（协程已被杀）复位为 failed，
+    # 避免运行历史出现永远不出结果的僵尸 running（实例免费层会休眠/重启）。
+    from app.api.routers.pipeline import reset_orphan_runs
+    await reset_orphan_runs()
 
 
 app.include_router(misc.router, prefix="/api", tags=["misc"])
