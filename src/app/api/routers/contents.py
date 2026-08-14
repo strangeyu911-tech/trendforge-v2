@@ -22,10 +22,25 @@ from app.workflow.orchestrator import get_trace, run_revise_rounds
 router = APIRouter()
 
 
+def _looks_like_error(title: str) -> bool:
+    """被拒/降级内容有时会误把模型报错信息当成标题存库（如葡语 'Erro: ...'）。"""
+    t = (title or "").strip().lower()
+    return t.startswith(("erro", "error", "failed", "exception", "traceback"))
+
+
+def _clean_title(c: Content) -> str:
+    """被拒内容的标题若是报错文本，用 brief 选题兜底，避免列表/详情出现乱码标题。"""
+    title = c.title or ""
+    if (c.status or "") == "rejected" and _looks_like_error(title):
+        brief = c.brief if isinstance(c.brief, dict) else {}
+        return brief.get("topic") or "（已驳回）选题证据不达标"
+    return title
+
+
 def _content_summary(c: Content) -> dict:
     return {
         "id": c.id, "market": c.market, "language": c.language,
-        "title": c.title, "summary": c.summary, "status": c.status,
+        "title": _clean_title(c), "summary": c.summary, "status": c.status,
         "topic": (c.brief or {}).get("topic", ""),
         "angle": (c.brief or {}).get("angle", ""),
         "quality_avg": (c.quality or {}).get("avg", 0),

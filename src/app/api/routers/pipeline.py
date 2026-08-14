@@ -10,7 +10,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.models import PipelineCache, SessionLocal, Task
+from app.models import Content, PipelineCache, SessionLocal, Task
 from app.workflow.orchestrator import run_pipeline
 
 router = APIRouter()
@@ -80,9 +80,25 @@ async def list_tasks(limit: int = 20):
     async with SessionLocal() as session:
         rows = (await session.execute(
             select(Task).order_by(Task.created_at.desc()).limit(limit))).scalars().all()
-        return {"tasks": [{
-            "id": t.id, "market": t.market, "status": t.status, "progress": t.progress,
-            "output": t.output, "error": t.error,
-            "total_duration_ms": t.total_duration_ms, "total_cost_cny": t.total_cost_cny,
-            "created_at": t.created_at.isoformat() if t.created_at else "",
-        } for t in rows]}
+        # 反查真实内容标题，兜底填补 output.title 缺失（种子库旧任务/异常落库可能为空）→
+        # 避免前端“运行历史”渲染出空白标题链接。
+        need_ids = {t.output.get("content_id") for t in rows
+                    if t.output and t.output.get("content_id") and not (t.output.get("title") or "").strip()}
+        title_map = {}
+        if need_ids:
+            crows = (await session.execute(
+                select(Content.id, Content.title).where(Content.id.in_(need_ids)))).all()
+            title_map = {cid: ctitle for cid, ctitle in crows}
+        out = []
+        for t in rows:
+            task_out = dict(t.output) if isinstance(t.output, dict) else (t.output or {})
+            cid = task_out.get("content_id")
+            if cid and not (task_out.get("title") or "").strip() and cid in title_map:
+                task_out = {**task_out, "title": title_map[cid] or ""}
+            out.append({
+                "id": t.id, "market": t.market, "status": t.status, "progress": t.progress,
+                "output": task_out, "error": t.error,
+                "total_duration_ms": t.total_duration_ms, "total_cost_cny": t.total_cost_cny,
+                "created_at": t.created_at.isoformat() if t.created_at else "",
+            })
+        return {"tasks": out}
