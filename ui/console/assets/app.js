@@ -339,6 +339,20 @@ async function startRun(force) {
   }
 }
 
+/* 运行历史“结果”列渲染：标题缺失时显示“查看内容”而非空白链接；
+   未产出内容（失败/驳回）的任务显示状态徽标，报错仅在 hover 提示中给出，不再当成标题。 */
+function taskResultCell(x) {
+  const out = x.output || {};
+  if (out.content_id) {
+    const title = (out.title || '').trim();
+    const label = title ? esc(title.slice(0, 30)) : '<span class="muted">查看内容</span>';
+    return `<a class="link" href="#content/${out.content_id}">${label}</a>`;
+  }
+  if (x.status === 'rejected') return '<span class="tag red">已驳回</span>';
+  if (x.status === 'failed') return `<span class="tag red" title="${esc(x.error || '')}">运行失败</span>`;
+  return '<span class="muted">—</span>';
+}
+
 async function loadTasks() {
   const panel = document.getElementById('tasks-panel');
   try {
@@ -348,7 +362,7 @@ async function loadTasks() {
       ${t.tasks.map(x => `<tr>
         <td>${x.market}</td>
         <td>${statusTag(x.status)}</td>
-        <td>${x.output && x.output.content_id ? `<a class="link" href="#content/${x.output.content_id}">${esc((x.output.title || '').slice(0, 30))}</a>` : esc((x.error || '').slice(0, 40))}</td>
+        <td>${taskResultCell(x)}</td>
         <td>${(x.total_duration_ms / 1000).toFixed(0)}s</td><td>${x.total_cost_cny.toFixed(4)}</td>
         <td>${fmtTime(x.created_at)}</td></tr>`).join('') || '<tr><td colspan="6">暂无运行</td></tr>'}
     </table>`;
@@ -371,8 +385,9 @@ function contentsTable(list) {
   return `<table>
     <tr><th>标题</th><th>市场</th><th>质量</th><th>形态</th><th>时间</th></tr>
     ${list.map(x => `<tr>
-      <td><a class="link" href="#content/${x.id}">${esc(x.title.slice(0, 46))}</a>
-        ${x.is_fallback ? '<span class="tag orange">兜底</span>' : ''}</td>
+      <td><a class="link" href="#content/${x.id}">${esc((x.title || '（无标题）').slice(0, 46))}</a>
+        ${x.is_fallback ? '<span class="tag orange">兜底</span>' : ''}
+        ${x.status && x.status !== 'published' ? `<span class="tag red">${x.status === 'rejected' ? '已驳回' : esc(x.status)}</span>` : ''}</td>
       <td><span class="tag">${x.market}</span></td>
       <td>${x.quality_avg ? x.quality_avg.toFixed(1) : '-'}</td>
       <td>${x.formats.map(f => `<span class="tag gray">${esc(FMT_META[f]?.label || f)}</span>`).join('')}</td>
@@ -399,7 +414,7 @@ async function contentDetail(id) {
       status: t.brief ? 'ready' : 'none',
     });
     root.innerHTML = `
-      <h1 class="page-title">${esc(c.title)}</h1>
+      <h1 class="page-title">${esc(c.title || '（无标题）')}</h1>
       <p class="page-sub"><span class="tag">${c.market}</span> <span class="tag gray">${c.language}</span>
         质量 ${c.quality_avg?.toFixed(1) || '-'}/5 · 裁决 ${esc(VERDICT_LABEL[c.verdict] || c.verdict || '-')}
         ${c.is_fallback ? '<span class="tag orange">含兜底环节</span>' : ''}
