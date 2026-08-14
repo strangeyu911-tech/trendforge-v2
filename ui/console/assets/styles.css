@@ -212,3 +212,7 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
   border-radius:50%; background:#fff; border:3px solid #4338ca; box-shadow:0 1px 3px rgba(0,0,0,.25);
   margin-top:-6px; cursor:pointer; }
 .cal-range::-moz-range-thumb { width:18px; height:18px; border:3px solid #4338ca; border-radius:50%; background:#fff; cursor:pointer; }
+
+/* 标题单元格：完整标题，超宽时优雅省略（末尾 …），hover 看全量；不再硬截断断词。 */
+.title-cell { display:inline-block; max-width:300px; white-space:nowrap; overflow:hidden;
+              text-overflow:ellipsis; vertical-align:bottom; }

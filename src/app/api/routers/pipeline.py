@@ -102,3 +102,21 @@ async def list_tasks(limit: int = 20):
                 "created_at": t.created_at.isoformat() if t.created_at else "",
             })
         return {"tasks": out}
+
+
+async def reset_orphan_runs() -> int:
+    """部署/重启后，DB 中仍标记 running 的后台任务（协程已被实例重启/休眠杀掉）复位为 failed。
+
+    进程重启后内存 JOBS 表必然丢失，这些 running 是永远不出结果的僵尸，会让运行历史
+    出现"running 却空白"的不可信记录。每次启动扫描一次即可根治（幂等）。
+    """
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(Task).where(Task.status == "running"))).scalars().all()
+        for t in rows:
+            t.status = "failed"
+            t.error = "实例重启/休眠时后台任务中断"
+            t.progress = "interrupted"
+        if rows:
+            await session.commit()
+        return len(rows)
