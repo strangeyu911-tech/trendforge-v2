@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 
@@ -48,6 +49,17 @@ async def run_revise_rounds(ctx: RunContext, data: dict) -> tuple[dict, int]:
         data.update(await FactCheckerAgent()._exec(ctx, data))
         data.update(await EditorAgent()._exec(ctx, data))
     return data, rounds
+
+
+_CJK_RE = re.compile(r'[\u4e00-\u9fff]')
+
+
+def _title_lang_mismatch(title: str, language: str) -> bool:
+    """fallback 模型可能不遵守 writer 模板的 {{language}} 约束，产出混语标题。
+    en 市场内容标题若含中文字符，即判定语言错配，需兜底为英文。"""
+    if (language or '').lower().startswith('en') and _CJK_RE.search(title or ''):
+        return True
+    return False
 
 
 async def run_pipeline(market_code: str) -> dict:
@@ -107,10 +119,17 @@ async def run_pipeline(market_code: str) -> dict:
 
             # ---- 落库 ----
             article = data["article"]
+            spans_fallback = any(s.status == "degraded" for s in ctx.spans)
+            title = article["title"]
+            # fallback 内容语言兜底：fallback 模型若不遵守 {{language}}，标题会混进中文等错配语言。
+            # 检测到 en 市场标题含中文时，用选题派生英文标题，杜绝全球化内容错配语言（第三条问题）。
+            if spans_fallback and _title_lang_mismatch(title, market.language):
+                topic = (data.get("brief") or {}).get("topic", "")
+                title = f"{topic}: Key Developments" if topic else "AI Content Update"
             content = Content(
                 id=str(uuid.uuid4()), task_id=task.id, market=market.code,
                 language=market.language, status="published",
-                brief=data["brief"], title=article["title"], summary=article.get("summary", ""),
+                brief=data["brief"], title=title, summary=article.get("summary", ""),
                 body=clean_ev(article["body"]), evidences=data["evidences"],
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
                 quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
@@ -118,7 +137,7 @@ async def run_pipeline(market_code: str) -> dict:
                          "evidence_guard": data.get("evidence_guard", {})},
                 decision_log=ctx.decision_log, prompt_versions=ctx.prompt_versions,
                 signals=data.get("signals", []),
-                is_fallback=any(s.status == "degraded" for s in ctx.spans),
+                is_fallback=spans_fallback,
             )
             session.add(content)
             task.status = "done"
