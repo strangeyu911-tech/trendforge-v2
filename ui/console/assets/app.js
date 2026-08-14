@@ -350,7 +350,14 @@ function taskResultCell(x) {
     const label = title
       ? `<span class="title-cell" title="${esc(title)}">${esc(title)}</span>`
       : '<span class="muted">查看内容</span>';
-    return `<a class="link" href="#content/${out.content_id}">${label}</a>`;
+    let badge = '';
+    // 同选题多次供给：最新一条标「↻重跑N次」，旧版标「↻旧版」，消除运行历史"重复"体感（第四条）
+    if (x._dup_count > 1) {
+      badge = x._is_latest
+        ? ` <span class="tag gray" title="同选题更早运行于 ${esc(x._dup_earliest)}">↻ 重跑${x._dup_count - 1}次</span>`
+        : ` <span class="tag gray" title="同选题已有更新版本，此为早期运行">↻ 旧版</span>`;
+    }
+    return `<a class="link" href="#content/${out.content_id}">${label}</a>${badge}`;
   }
   if (x.status === 'rejected') return '<span class="tag red">已驳回</span>';
   if (x.status === 'failed') {
@@ -374,7 +381,7 @@ async function loadTasks() {
     const t = await API.tasks();
     panel.innerHTML = `<h3>运行历史</h3><table>
       <tr><th>市场</th><th>状态</th><th>结果</th><th>耗时</th><th>成本(¥)</th><th>时间</th></tr>
-      ${t.tasks.map(x => `<tr>
+      ${t.tasks.map(x => `<tr class="${!x._is_latest ? 'dup-old' : ''}">
         <td>${x.market}</td>
         <td>${taskStatusCell(x)}</td>
         <td>${taskResultCell(x)}</td>

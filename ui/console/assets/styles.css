@@ -216,3 +216,7 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
 /* 标题单元格：完整标题，超宽时优雅省略（末尾 …），hover 看全量；不再硬截断断词。 */
 .title-cell { display:inline-block; max-width:300px; white-space:nowrap; overflow:hidden;
               text-overflow:ellipsis; vertical-align:bottom; }
+
+/* 运行历史：同选题重跑的旧版本整行灰显，突出最新一条，消除"重复内容"体感（第四条） */
+tr.dup-old { opacity: .5; }
+tr.dup-old:hover { opacity: 1; }
