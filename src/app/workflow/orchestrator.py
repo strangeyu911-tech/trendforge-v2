@@ -57,32 +57,69 @@ _HIRA_RE = re.compile(r'[\u3040-\u309f]')   # 平假名
 _KATA_RE = re.compile(r'[\u30a0-\u30ff]')   # 片假名
 _HANG_RE = re.compile(r'[\uac00-\ud7a3]')   # 谚文
 
+# 目标语言→人类可读名（提升 LLM 翻译任务清晰度，避免 "into ja" 这类歧义）
+_LANG_NAME = {"zh": "Chinese", "ja": "Japanese", "ko": "Korean",
+              "pt": "Portuguese", "en": "English"}
+# 葡语特征：重音字符（英文极少出现，强信号）
+_PT_DIAC_RE = re.compile(r'[áàâãéèêíóòôõúçÁÀÂÃÉÈÊÍÓÒÔÕÚÇ]')
+# 葡语高频词（仅收录英文里不会作独立词出现的，避免与英文误判；命中 1+ 即视为葡语）
+_PT_STOP = {"que", "para", "com", "não", "dos", "das", "uma", "por", "mais",
+            "seu", "sua", "foi", "tem", "sobre", "entre", "quando", "da", "de", "em",
+            "ao", "pelas", "nesta", "isso", "aq"}
+
 
 def _is_cjk_lang(language: str) -> bool:
     """中文市场（zh/cn/tw）：CJK 字符属正常正文，不应判为错配。"""
     return (language or '').lower().startswith(('zh', 'cn', 'tw'))
 
 
-def _title_lang_mismatch(title: str, language: str) -> bool:
-    """fallback 链路可能不遵守 {{language}} 约束，标题混入中文。
+def _target_lang_present(text: str, language: str) -> bool:
+    """判断文本是否『命中目标市场语言特征』。
 
-    任何 non-CJK 市场标题含中文字符即判错配（第三条问题）。
-    同样需用假名/谚文区分『真日文/真韩文标题(含汉字)』与『误入的中文标题』，
-    否则会误伤 JP/KO 市场正确的日文/韩文标题。
+    v2.17 只抓『non-CJK 正文混入中文』，但 JA/KO/BR 的 fallback 产出是英文（无中文字符），
+    因此根本没被判错配、没翻译——这就是『对应语言缺失』的真因。
+    本函数改为按目标语言的可判定特征识别：
+      - zh : 含 CJK 字符
+      - ja : 含假名（真日文必含假名，纯汉字串更可能是中文）
+      - ko : 含谚文
+      - pt : 含葡语重音字符，或命中 2+ 葡语高频虚词
+      - en/未知 : 含足够拉丁字母即视为合法（英文兜底稿本就是 en 市场的目标语言）
     """
-    if _is_cjk_lang(language):
+    text = text or ''
+    if not text.strip():
         return False
-    t = title or ''
-    cjk = len(_CJK_RE.findall(t))
-    if cjk == 0:
-        return False
-    lang = (language or '').lower()
+    lang = (language or 'en').lower()
+    if lang.startswith(('zh', 'cn', 'tw')):
+        return len(_CJK_RE.findall(text)) >= 1
     if lang.startswith('ja'):
-        kana = len(_HIRA_RE.findall(t)) + len(_KATA_RE.findall(t))
-        return kana == 0                      # 有汉字无假名 → 实为中文标题
+        return (len(_HIRA_RE.findall(text)) + len(_KATA_RE.findall(text))) >= 1
     if lang.startswith('ko'):
-        return len(_HANG_RE.findall(t)) == 0  # 有汉字无谚文 → 实为中文标题
-    return True                               # en/pt 等：标题不应出现中文
+        return len(_HANG_RE.findall(text)) >= 1
+    if lang.startswith('pt'):
+        if _PT_DIAC_RE.search(text):
+            return True
+        words = set(re.findall(r'[a-zà-ÿ]{2,}', text.lower()))
+        return len(words & _PT_STOP) >= 1
+    # en / 未知：拉丁字母即视为命中
+    return len(re.findall(r'[A-Za-z]', text)) >= 8
+
+
+def _title_lang_mismatch(title: str, language: str) -> bool:
+    """fallback 链路可能不遵守 {{language}} 约束，标题错配目标语言。
+
+    判错配 = 标题非目标语言：非 CJK 市场标题含中文（污染），或标题未命中目标语言特征
+    （如 JA/KO/BR 市场拿到英文标题）。CJK 市场用 _target_lang_present 识别（英文标题会被判错配）。
+    """
+    if not (title or '').strip():
+        return False
+    lang = (language or 'en').lower()
+    # 反向污染：en/pt 等『绝不出现汉字』的市场，标题混入中文 → 错配。
+    # 注意排除 ja/ko：日文/韩文标题天然含汉字(kanji/hanja，同处 CJK 码位)，
+    # 不能因含汉字就判为中文污染，否则会误杀正确的日文/韩文标题。
+    if not _is_cjk_lang(lang) and not lang.startswith(('ja', 'ko')):
+        if len(_CJK_RE.findall(title)) >= 1:
+            return True
+    return not _target_lang_present(title, language)
 
 
 def _body_to_text(body) -> str:
@@ -101,24 +138,23 @@ def _body_to_text(body) -> str:
 
 
 def _body_lang_mismatch(body, language: str) -> bool:
-    """non-CJK 市场正文若混入中文（且缺目标语言应有的假名/谚文），判语言错配。
+    """判断结构化正文是否错配目标语言（广义：非目标语言即错配）。
 
-    关键边界：日文正文本身含汉字(CJK)、韩文含汉字，需用假名/谚文区分
-    『真日文/真韩文』与『误入的中文』，否则会误伤 JP/KO 市场正确内容。
+    - 保留中文污染防护：non-CJK 正文混显著中文(cjk>=4) → 错配；
+    - 其余情况交给 _target_lang_present：JA/KO/BR 市场拿到英文正文（无假名/谚文/葡语特征）
+      → 未命中目标语言 → 错配 → 触发全文翻译。
     """
-    if _is_cjk_lang(language):
-        return False  # 中文市场，CJK 正常
     text = _body_to_text(body)
-    cjk = len(_CJK_RE.findall(text))
-    if cjk == 0:
+    if not text.strip():
         return False
-    lang = (language or '').lower()
-    if lang.startswith('ja'):
-        kana = len(_HIRA_RE.findall(text)) + len(_KATA_RE.findall(text))
-        return kana == 0 and cjk >= 4          # 有汉字无假名 → 实为中文
-    if lang.startswith('ko'):
-        return len(_HANG_RE.findall(text)) == 0 and cjk >= 4   # 有汉字无谚文 → 实为中文
-    return cjk >= 4                             # en/pt 等：正文不应出现中文
+    lang = (language or 'en').lower()
+    # 反向污染：en/pt 等『绝不出现汉字』的市场，正文混显著中文 → 错配（保留 v2.17 防护）。
+    # 同样排除 ja/ko：其正文天然含汉字，不能因含汉字判为中文污染。
+    if not _is_cjk_lang(lang) and not lang.startswith(('ja', 'ko')):
+        cjk = len(_CJK_RE.findall(text))
+        if cjk >= 4:                      # 非 CJK 正文混显著中文 → 错配
+            return True
+    return not _target_lang_present(text, language)
 
 
 async def _translate_body(ctx: RunContext, body, language: str) -> dict | None:
@@ -150,6 +186,47 @@ async def _translate_body(ctx: RunContext, body, language: str) -> dict | None:
     if not sections:
         return None
     return {"sections": sections}
+
+
+async def _translate_title(ctx: RunContext, title: str, language: str) -> str | None:
+    """fallback 标题错配时，LLM 把标题翻译到目标市场语言（best-effort）。"""
+    name = _LANG_NAME.get((language or 'en').lower(), language or 'English')
+    system = (f"You are a professional translator. Translate the news headline into {name}. "
+              "Output ONLY the translated headline text: no quotes, no markdown fence, no commentary.")
+    try:
+        resp = await ctx.llm.chat(system, title or '', temperature=0.3, max_tokens=200)
+        t = (resp.text or '').strip().strip('"').strip("'").strip()
+        return t or None
+    except Exception:
+        return None
+
+
+async def _translate_text(ctx: RunContext, text: str, language: str) -> str | None:
+    """fallback 摘要错配时，LLM 把摘要翻译到目标市场语言（best-effort）。"""
+    name = _LANG_NAME.get((language or 'en').lower(), language or 'English')
+    system = (f"You are a professional translator. Translate the following text into {name}. "
+              "Output ONLY the translated text, no markdown fence, no commentary.")
+    try:
+        resp = await ctx.llm.chat(system, text or '', temperature=0.3, max_tokens=800)
+        t = (resp.text or '').strip()
+        return t or None
+    except Exception:
+        return None
+
+
+def _localized_topic_title(topic: str, language: str) -> str:
+    """标题翻译兜底失败时的本地化派生标题（避免 JA/KO/BR 退化成英文标题）。"""
+    t = topic or "AI Content Update"
+    lang = (language or 'en').lower()
+    if lang.startswith(('zh', 'cn', 'tw')):
+        return f"{t}：关键进展"
+    if lang.startswith('ja'):
+        return f"{t}：最新の動き"
+    if lang.startswith('ko'):
+        return f"{t}：주요 전개"
+    if lang.startswith('pt'):
+        return f"{t}: Principais Desenvolvimentos"
+    return f"{t}: Key Developments"
 
 
 async def run_pipeline(market_code: str) -> dict:
@@ -212,33 +289,54 @@ async def run_pipeline(market_code: str) -> dict:
             spans_fallback = any(s.status == "degraded" for s in ctx.spans)
             title = article["title"]
             body = article["body"]
-            # fallback 内容语言兜底：fallback 链路（含 Writer L3 规则兜底稿）可能不遵守
-            # {{language}} 约束，产出错配语言（典型：non-CJK 市场正文/标题混入中文）。
-            # —— 标题：non-CJK 市场标题含中文 → 用选题派生英文标题（第三条问题）
-            # —— 正文：non-CJK 市场正文含显著中文且缺目标语言假名/谚文 → LLM 翻译兜底至目标语言；
-            #          翻译失败则保留原稿并打 language_guard 标记（供分析中心/校准可见）。
-            language_guard: dict = {"body_checked": spans_fallback}
-            if spans_fallback and _title_lang_mismatch(title, market.language):
-                topic = (data.get("brief") or {}).get("topic", "")
-                title = f"{topic}: Key Developments" if topic else "AI Content Update"
-                language_guard["title_fixed"] = True
-            if spans_fallback and _body_lang_mismatch(body, market.language):
-                translated = await _translate_body(ctx, body, market.language)
-                if translated and not _body_lang_mismatch(translated, market.language):
-                    body = translated
-                    language_guard["body_fixed"] = True
-                    language_guard["note"] = "fallback 正文语言错配，已翻译至目标市场语言"
-                    ctx.log_decision("orchestrator", "fallback 正文语言错配，已翻译至目标语言",
-                                     market=market.code, language=market.language)
-                else:
-                    language_guard["body_mismatch"] = True
-                    language_guard["note"] = "fallback 正文语言错配，翻译兜底失败，保留原稿并标记"
-                    ctx.log_decision("orchestrator", "fallback 正文语言错配且翻译兜底失败",
-                                     market=market.code)
+            summary = article.get("summary", "")
+            # fallback 全文语言兜底：fallback 链路（含 Writer L3 规则兜底稿）可能不遵守 {{language}}
+            # 约束，产出错配语言。错配判定从 v2.17「只抓 non-CJK 混中文」升级为「是否命中目标语言特征」
+            # （ja=假名 / ko=谚文 / pt=葡语重音或虚词 / en=拉丁 / zh=CJK），因此 JA/KO/BR 拿到英文
+            # 兜底稿也会被识别并全文翻译至目标市场语言。
+            # —— 标题：错配→LLM 翻译至目标语言；失败→本地化派生标题（JA/KO/BR 不退化为英文）。
+            # —— 正文：错配→_translate_body 全文（含小标题）翻译至目标语言。
+            # —— 摘要：错配→LLM 翻译至目标语言。
+            # 任何翻译失败均保留原稿并打 language_guard 标记（供分析中心/校准可见）。
+            language_guard: dict = {"body_checked": spans_fallback,
+                                    "target_language": market.language}
+            if spans_fallback:
+                # 标题
+                if _title_lang_mismatch(title, market.language):
+                    tr = await _translate_title(ctx, title, market.language)
+                    if tr:
+                        title = tr
+                        language_guard["title_fixed"] = True
+                    else:
+                        topic = (data.get("brief") or {}).get("topic", "")
+                        title = _localized_topic_title(topic, market.language)
+                        language_guard["title_fixed"] = True
+                        language_guard["title_derived"] = True
+                # 正文（含小标题）全文翻译
+                if _body_lang_mismatch(body, market.language):
+                    translated = await _translate_body(ctx, body, market.language)
+                    if translated and not _body_lang_mismatch(translated, market.language):
+                        body = translated
+                        language_guard["body_fixed"] = True
+                        language_guard["note"] = f"fallback 正文语言错配，已全文翻译至 {market.language}"
+                        ctx.log_decision("orchestrator", "fallback 正文语言错配，已全文翻译至目标语言",
+                                         market=market.code, language=market.language)
+                    else:
+                        language_guard["body_mismatch"] = True
+                        language_guard["note"] = f"fallback 正文语言错配，全文翻译兜底失败，保留原稿并标记"
+                        ctx.log_decision("orchestrator", "fallback 正文语言错配且全文翻译兜底失败",
+                                         market=market.code)
+                # 摘要
+                if summary and _body_lang_mismatch({"sections": [{"heading": "", "text": summary}]},
+                                                   market.language):
+                    ts = await _translate_text(ctx, summary, market.language)
+                    if ts:
+                        summary = ts
+                        language_guard["summary_fixed"] = True
             content = Content(
                 id=str(uuid.uuid4()), task_id=task.id, market=market.code,
                 language=market.language, status="published",
-                brief=data["brief"], title=title, summary=article.get("summary", ""),
+                brief=data["brief"], title=title, summary=summary,
                 body=clean_ev(body), evidences=data["evidences"],
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
                 quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
