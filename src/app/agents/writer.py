@@ -83,25 +83,42 @@ class WriterAgent(BaseAgent):
         旧实现是 `for e in evidences[:4]: 每条证据写一节` —— 兜底逻辑本身就在
         制造它要防的问题（US 那条"多篇新闻片段拼凑"就是这个形状）。
         宁可短、宁可信息量小，也绝不生成拼盘。
+
+        小标题/引导句按目标市场语言切换：中文市场用中文，其余市场用英语，
+        杜绝 non-CJK 市场 fallback 正文硬编码中文（与 orchestrator 正文语言校验互为兜底）。
         """
         brief, evidences = inputs.get("brief", {}), inputs.get("evidences", [])
         topic = brief.get("topic", "行业动态")
+        zh = (ctx.market.language or '').lower().startswith(('zh', 'cn', 'tw'))
         main = [e for e in evidences if e.get("is_main")] or evidences[:2]
         lead = main[0] if main else None
-        sections = [{
-            "heading": "事件概览",
-            "text": (f"近期，{topic}受到关注。{brief.get('why_now', '')} "
-                     + (f"{lead['text'][:260]} [{lead['ev_id']}]" if lead else "")).strip(),
-        }]
-        detail = " ".join(f"{e['text'][:220]} [{e['ev_id']}]" for e in main[1:3])
-        sections.append({
-            "heading": "为何值得关注",
-            "text": (f"{brief.get('angle', '')} {brief.get('hook', '')} {detail}").strip()
-                    or (f"{lead['text'][260:520]} [{lead['ev_id']}]" if lead else topic),
-        })
+        if zh:
+            lead_text = (f"近期，{topic}受到关注。{brief.get('why_now', '')} "
+                         + (f"{lead['text'][:260]} [{lead['ev_id']}]" if lead else "")).strip()
+            detail = " ".join(f"{e['text'][:220]} [{e['ev_id']}]" for e in main[1:3])
+            why_text = (f"{brief.get('angle', '')} {brief.get('hook', '')} {detail}").strip() \
+                       or (f"{lead['text'][260:520]} [{lead['ev_id']}]" if lead else topic)
+            sections = [
+                {"heading": "事件概览", "text": lead_text},
+                {"heading": "为何值得关注", "text": why_text},
+            ]
+            title = f"{topic}：关键进展"
+            summary = f"围绕{topic}的核心事实梳理（规则兜底稿，仅采用主干来源）。"
+        else:
+            lead_text = (f"Recently, {topic} has drawn attention. {brief.get('why_now', '')} "
+                         + (f"{lead['text'][:260]} [{lead['ev_id']}]" if lead else "")).strip()
+            detail = " ".join(f"{e['text'][:220]} [{e['ev_id']}]" for e in main[1:3])
+            why_text = (f"{brief.get('angle', '')} {brief.get('hook', '')} {detail}").strip() \
+                       or (f"{lead['text'][260:520]} [{lead['ev_id']}]" if lead else topic)
+            sections = [
+                {"heading": "Event Overview", "text": lead_text},
+                {"heading": "Why It Matters", "text": why_text},
+            ]
+            title = f"{topic}: Key Developments"
+            summary = f"A concise fact-check on {topic} (rule-based fallback, main sources only)."
         article = {
-            "title": f"{topic}：关键进展",
-            "summary": f"围绕{topic}的核心事实梳理（规则兜底稿，仅采用主干来源）。",
+            "title": title,
+            "summary": summary,
             "body": {"sections": sections},
         }
         return {"article": article,

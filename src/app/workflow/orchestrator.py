@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from datetime import datetime
@@ -24,7 +25,7 @@ from app.agents.topic_guard import TopicGuardAgent
 from app.agents.trend_analyst import TrendAnalystAgent
 from app.agents.writer import WriterAgent
 from app.config import settings
-from app.llm import get_llm
+from app.llm import extract_json, get_llm
 from app.models import BadCase, Content, Market, SessionLocal, Task
 
 
@@ -52,14 +53,103 @@ async def run_revise_rounds(ctx: RunContext, data: dict) -> tuple[dict, int]:
 
 
 _CJK_RE = re.compile(r'[\u4e00-\u9fff]')
+_HIRA_RE = re.compile(r'[\u3040-\u309f]')   # 平假名
+_KATA_RE = re.compile(r'[\u30a0-\u30ff]')   # 片假名
+_HANG_RE = re.compile(r'[\uac00-\ud7a3]')   # 谚文
+
+
+def _is_cjk_lang(language: str) -> bool:
+    """中文市场（zh/cn/tw）：CJK 字符属正常正文，不应判为错配。"""
+    return (language or '').lower().startswith(('zh', 'cn', 'tw'))
 
 
 def _title_lang_mismatch(title: str, language: str) -> bool:
-    """fallback 模型可能不遵守 writer 模板的 {{language}} 约束，产出混语标题。
-    en 市场内容标题若含中文字符，即判定语言错配，需兜底为英文。"""
-    if (language or '').lower().startswith('en') and _CJK_RE.search(title or ''):
-        return True
-    return False
+    """fallback 链路可能不遵守 {{language}} 约束，标题混入中文。
+
+    任何 non-CJK 市场标题含中文字符即判错配（第三条问题）。
+    同样需用假名/谚文区分『真日文/真韩文标题(含汉字)』与『误入的中文标题』，
+    否则会误伤 JP/KO 市场正确的日文/韩文标题。
+    """
+    if _is_cjk_lang(language):
+        return False
+    t = title or ''
+    cjk = len(_CJK_RE.findall(t))
+    if cjk == 0:
+        return False
+    lang = (language or '').lower()
+    if lang.startswith('ja'):
+        kana = len(_HIRA_RE.findall(t)) + len(_KATA_RE.findall(t))
+        return kana == 0                      # 有汉字无假名 → 实为中文标题
+    if lang.startswith('ko'):
+        return len(_HANG_RE.findall(t)) == 0  # 有汉字无谚文 → 实为中文标题
+    return True                               # en/pt 等：标题不应出现中文
+
+
+def _body_to_text(body) -> str:
+    """把结构化正文（{sections:[{heading,text}]} 或等价 JSON 串）摊平成待检测文本。"""
+    if isinstance(body, dict):
+        return " ".join(
+            f"{s.get('heading', '')} {s.get('text', '')}"
+            for s in body.get('sections', []) if isinstance(s, dict)
+        )
+    if isinstance(body, str):
+        try:
+            return _body_to_text(json.loads(body))
+        except Exception:
+            return body
+    return str(body)
+
+
+def _body_lang_mismatch(body, language: str) -> bool:
+    """non-CJK 市场正文若混入中文（且缺目标语言应有的假名/谚文），判语言错配。
+
+    关键边界：日文正文本身含汉字(CJK)、韩文含汉字，需用假名/谚文区分
+    『真日文/真韩文』与『误入的中文』，否则会误伤 JP/KO 市场正确内容。
+    """
+    if _is_cjk_lang(language):
+        return False  # 中文市场，CJK 正常
+    text = _body_to_text(body)
+    cjk = len(_CJK_RE.findall(text))
+    if cjk == 0:
+        return False
+    lang = (language or '').lower()
+    if lang.startswith('ja'):
+        kana = len(_HIRA_RE.findall(text)) + len(_KATA_RE.findall(text))
+        return kana == 0 and cjk >= 4          # 有汉字无假名 → 实为中文
+    if lang.startswith('ko'):
+        return len(_HANG_RE.findall(text)) == 0 and cjk >= 4   # 有汉字无谚文 → 实为中文
+    return cjk >= 4                             # en/pt 等：正文不应出现中文
+
+
+async def _translate_body(ctx: RunContext, body, language: str) -> dict | None:
+    """fallback 正文语言错配时，用 LLM 把结构化正文翻译到目标市场语言（best-effort）。
+
+    输入 body 为 {sections:[{heading,text}]} 或其 JSON 串；输出保持同结构。
+    翻译失败/结构不合法时返回 None，由调用方决定保留原稿或标记。
+    """
+    src = json.dumps(body, ensure_ascii=False) if isinstance(body, (dict, list)) else str(body)
+    system = (
+        f"You are a professional translator. Translate the following news article into {language}. "
+        "The input is a JSON object with a top-level 'sections' array; each element has 'heading' and 'text' keys. "
+        "Translate the values of 'heading' and 'text' into the target language. "
+        "Preserve the exact JSON structure and keys; keep any inline [ev_N] citation markers unchanged. "
+        "Output ONLY valid JSON (no markdown fence, no commentary)."
+    )
+    try:
+        resp = await ctx.llm.chat(system, src, temperature=0.3, max_tokens=8000)
+        translated = extract_json(resp.text)
+    except Exception:
+        return None
+    if not isinstance(translated, dict) or not isinstance(translated.get("sections"), list):
+        return None
+    sections = [
+        {"heading": str(s.get("heading", "")), "text": str(s.get("text", ""))}
+        for s in translated["sections"]
+        if isinstance(s, dict) and (s.get("heading") or s.get("text"))
+    ]
+    if not sections:
+        return None
+    return {"sections": sections}
 
 
 async def run_pipeline(market_code: str) -> dict:
@@ -121,20 +211,40 @@ async def run_pipeline(market_code: str) -> dict:
             article = data["article"]
             spans_fallback = any(s.status == "degraded" for s in ctx.spans)
             title = article["title"]
-            # fallback 内容语言兜底：fallback 模型若不遵守 {{language}}，标题会混进中文等错配语言。
-            # 检测到 en 市场标题含中文时，用选题派生英文标题，杜绝全球化内容错配语言（第三条问题）。
+            body = article["body"]
+            # fallback 内容语言兜底：fallback 链路（含 Writer L3 规则兜底稿）可能不遵守
+            # {{language}} 约束，产出错配语言（典型：non-CJK 市场正文/标题混入中文）。
+            # —— 标题：non-CJK 市场标题含中文 → 用选题派生英文标题（第三条问题）
+            # —— 正文：non-CJK 市场正文含显著中文且缺目标语言假名/谚文 → LLM 翻译兜底至目标语言；
+            #          翻译失败则保留原稿并打 language_guard 标记（供分析中心/校准可见）。
+            language_guard: dict = {"body_checked": spans_fallback}
             if spans_fallback and _title_lang_mismatch(title, market.language):
                 topic = (data.get("brief") or {}).get("topic", "")
                 title = f"{topic}: Key Developments" if topic else "AI Content Update"
+                language_guard["title_fixed"] = True
+            if spans_fallback and _body_lang_mismatch(body, market.language):
+                translated = await _translate_body(ctx, body, market.language)
+                if translated and not _body_lang_mismatch(translated, market.language):
+                    body = translated
+                    language_guard["body_fixed"] = True
+                    language_guard["note"] = "fallback 正文语言错配，已翻译至目标市场语言"
+                    ctx.log_decision("orchestrator", "fallback 正文语言错配，已翻译至目标语言",
+                                     market=market.code, language=market.language)
+                else:
+                    language_guard["body_mismatch"] = True
+                    language_guard["note"] = "fallback 正文语言错配，翻译兜底失败，保留原稿并标记"
+                    ctx.log_decision("orchestrator", "fallback 正文语言错配且翻译兜底失败",
+                                     market=market.code)
             content = Content(
                 id=str(uuid.uuid4()), task_id=task.id, market=market.code,
                 language=market.language, status="published",
                 brief=data["brief"], title=title, summary=article.get("summary", ""),
-                body=clean_ev(article["body"]), evidences=data["evidences"],
+                body=clean_ev(body), evidences=data["evidences"],
                 formats=data.get("formats", {}), distribution=data.get("distribution", {}),
                 quality={"fact_check": data.get("fact_check", {}), **data.get("review", {}),
                          "topic_guard": data.get("topic_guard", {}),
-                         "evidence_guard": data.get("evidence_guard", {})},
+                         "evidence_guard": data.get("evidence_guard", {}),
+                         "language_guard": language_guard},
                 decision_log=ctx.decision_log, prompt_versions=ctx.prompt_versions,
                 signals=data.get("signals", []),
                 is_fallback=spans_fallback,
