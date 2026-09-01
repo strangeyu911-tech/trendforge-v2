@@ -32,6 +32,7 @@ async def list_markets():
             "code": m.code, "name": m.name, "language": m.language,
             "tone": m.tone, "default_style": m.default_style,
             "media_landscape": m.media_landscape, "culture_notes": m.culture_notes,
+            "insight_sources": m.insight_sources or [],
             "interests": m.interests, "platforms": m.platforms,
         } for m in rows]}
 

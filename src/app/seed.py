@@ -19,9 +19,13 @@ async def seed_all() -> dict:
         markets = json.loads((DATA_DIR / "markets.json").read_text(encoding="utf-8"))
         added_m = 0
         for m in markets:
-            if not await session.get(Market, m["code"]):
+            row = await session.get(Market, m["code"])
+            if not row:
                 session.add(Market(**m))
                 added_m += 1
+            elif not (getattr(row, "insight_sources", None) or []) and m.get("insight_sources"):
+                # 存量市场回填新增的洞察依据字段
+                row.insight_sources = m["insight_sources"]
         await session.commit()
         # 2. KB
         added_kb = await ingest_kb(session)
