@@ -43,6 +43,8 @@ class SignalScoutAgent(BaseAgent):
             raise AgentError(self.name, "LLM 未返回有效信号")
 
         # 把 LLM 选出的信号挂上真实元数据（URL / 来源 / 时间 / 互动）
+        # country 记录的是内容真实来源地区（GLOBAL=全球英文社区 / 国别=GDELT 按国过滤），
+        # 不再盖消费市场码——"为 JP 市场拉的英文信号"不等于"JP 本地内容"
         by_key = {s.title: s for s in raw}
         norm = []
         for r in picked[: settings.top_signals]:
@@ -53,7 +55,7 @@ class SignalScoutAgent(BaseAgent):
                 "title": title,
                 "angle_hint": str(r.get("angle_hint", "")),
                 "category": (ref.category if ref else r.get("category", "general")),
-                "country": ctx.market.code,
+                "country": (ref.country if ref else "UNKNOWN"),
                 "source": (ref.source if ref else ""),
                 "source_url": (ref.url if ref else ""),
                 "published_at": (ref.published_at if ref else ""),
@@ -119,7 +121,7 @@ class SignalScoutAgent(BaseAgent):
                 "title": str(s.get("title", ""))[:120],
                 "angle_hint": str(s.get("angle_hint", "")),
                 "category": (ref.category if ref else s.get("category", "general")),
-                "country": (ref.country if ref else ctx.market.code),
+                "country": (ref.country if ref else "UNKNOWN"),
                 "source": (ref.source if ref else ""),
                 "source_url": (ref.url if ref else ""),
                 "published_at": (ref.published_at if ref else ""),
@@ -140,7 +142,7 @@ class SignalScoutAgent(BaseAgent):
         docs = await recent_documents(ctx.session, days=12, limit=settings.top_signals)
         signals = [{
             "title": d.title, "angle_hint": "", "category": d.category,
-            "country": d.country or ctx.market.code, "source": d.source,
+            "country": d.country or "UNKNOWN", "source": d.source,
             "source_url": d.url, "published_at": d.published_at,
             "engagement": {}, "raw_lang": d.language,
             "strength": 5, "doc_id": d.id,

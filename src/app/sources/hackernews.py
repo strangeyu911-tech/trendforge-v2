@@ -56,7 +56,9 @@ async def fetch_hn(market_code: str, *, limit_per_query: int = 12) -> list[RawSi
             url = h.get("url") or (f"https://news.ycombinator.com/item?id={obj_id}" if obj_id else "")
             out.append(RawSignal(
                 title=h.get("title") or "(untitled)",
-                url=url, source="Hacker News", country=market_code,
+                url=url, source="Hacker News",
+                # HN 是全球英文社区：按市场关键词检索 ≠ 本地内容，来源地区如实标 GLOBAL
+                country="GLOBAL",
                 language="en", category=cat,
                 published_at=(h.get("created_at") or "")[:10],
                 engagement={"score": h.get("points") or 0, "comments": h.get("num_comments") or 0},

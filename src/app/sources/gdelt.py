@@ -11,6 +11,11 @@ from app.sources.base import RawSignal, http_get_json
 
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
 FIPS = {"US": "US", "JP": "JA", "KR": "KS", "BR": "BR", "CN": "CH"}
+# GDELT sourcelang 参数值：与 sourcecountry 同用，保证 JP/KR/BR/CN 市场拿到的是
+# 本地语言新闻，而非"该国出版的英文报道"——本地化信号真实性的关键一步
+SOURCELANG = {"US": "english", "JP": "japanese", "KR": "korean",
+              "BR": "portuguese", "CN": "chinese"}
+MARKET_LANGUAGE = {"US": "en", "JP": "ja", "KR": "ko", "BR": "pt", "CN": "zh"}
 MARKET_QUERY = {
     "US": "(artificial intelligence OR AI OR technology OR business)",
     "JP": "(Japan) (technology OR AI OR business OR robotics)",
@@ -25,9 +30,11 @@ async def fetch_gdelt(market_code: str, *, limit: int = 15) -> list[RawSignal]:
     query = MARKET_QUERY.get(market_code)
     if not fips or not query:
         return []
+    lang_param = SOURCELANG.get(market_code, "english")
     try:
         data = await http_get_json(GDELT, params={
-            "query": f"{query} sourcecountry:{fips}", "mode": "artlist",
+            "query": f"{query} sourcecountry:{fips} sourcelang:{lang_param}",
+            "mode": "artlist",
             "format": "json", "maxrecords": limit, "sort": "datedesc"})
     except Exception:
         return []  # best-effort：限流/封禁时静默降级
@@ -37,7 +44,9 @@ async def fetch_gdelt(market_code: str, *, limit: int = 15) -> list[RawSignal]:
         out.append(RawSignal(
             title=a.get("title") or "(untitled)",
             url=a.get("url") or "", source=a.get("domain") or "GDELT",
-            country=market_code, language="en", category="news",
+            # sourcecountry 过滤保证来源地区 = 检索国别；语言按市场真实语言记录
+            country=market_code, language=MARKET_LANGUAGE.get(market_code, "en"),
+            category="news",
             published_at=(a.get("seendate") or "")[:10],
             engagement={"score": 0, "comments": 0,
                         "tone": float(tone) if tone not in (None, "") else None},

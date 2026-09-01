@@ -1,6 +1,6 @@
 """真实信号源基础设施：RawSignal 数据类 + HTTP 工具 + 本地缓存 + 去重合并
 
-设计要点（面试话术核心）：
+设计要点：
 - 三个公开数据源（HN Algolia / Dev.to / GDELT）全部免费、无需 API Key
 - HN / Dev.to 的 points / reactions / comments 是**真实的人类内容消费信号**
 - 任何单源失败（限流 / 封禁 / 超时）都静默降级，主链路永不裸崩
@@ -33,7 +33,8 @@ class RawSignal:
     url: str
     source: str                 # 平台 / 媒体名
     published_at: str           # YYYY-MM-DD
-    country: str                # 市场码 US/JP/KR/BR/CN
+    country: str                # 内容**来源地区**：GDELT=sourcecountry 过滤国；HN/Dev.to="GLOBAL"
+                                # （全球英文社区）。它不是消费市场——消费市场由流水线上下文决定，两者不混用
     language: str               # 源语言
     category: str               # 推断的项目类目
     engagement: dict = field(default_factory=dict)   # {score, comments, tone?}

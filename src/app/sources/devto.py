@@ -31,7 +31,9 @@ async def fetch_devto(market_code: str, *, limit_per_tag: int = 10) -> list[RawS
         for a in data:
             out.append(RawSignal(
                 title=a.get("title") or "(untitled)",
-                url=a.get("url") or "", source="Dev.to", country=market_code,
+                url=a.get("url") or "", source="Dev.to",
+                # Dev.to 是全球开发者社区：按 tag 检索 ≠ 本地内容，来源地区如实标 GLOBAL
+                country="GLOBAL",
                 language="en", category=TAG_CATEGORY.get(tag, "tech"),
                 published_at=(a.get("published_at") or "")[:10],
                 engagement={"score": a.get("positive_reactions_count") or 0,
