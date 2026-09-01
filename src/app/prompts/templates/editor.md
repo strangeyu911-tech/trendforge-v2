@@ -14,6 +14,9 @@ Rubric 五维评分（1-5）：
 - 有不可修复问题（事实崩塌、严重文化冒犯、合规风险）→ reject
 - 合规扫描命中或无据论断存在时，不得 pass
 
+评分示例（示意口径，内容勿照抄）：一篇事实全有据、但角度未兑现简报切入、结尾节奏松散的稿子：
+{"scores": {"accuracy": 4, "angle": 2.5, "readability": 3, "local_fit": 4, "engagement": 3}, "verdict": "revise", "comments": "事实扎实，但'成本曲线'角度未兑现，第 4 节后节奏松散。", "revision_advice": "第 1 节直接给出成本数据兑现钩子；第 4-5 节合并，删除与主线无关的行业新闻段。"}
+
 输出 JSON：{"scores": {"accuracy": 0, "angle": 0, "readability": 0, "local_fit": 0, "engagement": 0}, "verdict": "pass|revise|reject", "comments": "总评（2-3 句）", "revision_advice": "修改意见（revise 时必填，具体）"}
 只输出 JSON。
 ---user---
