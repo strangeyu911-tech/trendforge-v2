@@ -20,6 +20,9 @@ from app.models import Content, ContentEvent, SessionLocal
 MARKET_FINISH_MOD = {"JP": 1.15, "KR": 1.0, "US": 1.0, "BR": 0.9, "CN": 1.05}
 # 形态基础 CTR 倾向
 FORMAT_CTR_MOD = {"video_script": 1.35, "card": 1.15, "brief_news": 1.0, "comment": 0.8, "article": 1.0}
+# 形态基线消费时长（秒，指数分布均值）：article 深读 ≈3.5min，card/brief 碎片化短消费。
+# 行为假设：完读事件的时长近似全量基线，点了没读完的约 35% 基线——用于「点了但留不住」分析。
+FORMAT_READ_SECONDS = {"article": 210, "video_script": 45, "card": 25, "brief_news": 50, "comment": 15}
 
 
 async def compute_calibration(session) -> dict | None:
@@ -88,6 +91,7 @@ async def simulate_events(content_id: str | None = None, per_content: int = 300,
             for slot in plan:
                 fmt = slot.get("format", "article")
                 fmt_mod = FORMAT_CTR_MOD.get(fmt, 1.0)
+                fmt_secs = FORMAT_READ_SECONDS.get(fmt, 60) * MARKET_FINISH_MOD.get(c.market, 1.0)
                 base = per_content * cal_factor
                 exposures = int(base * rng.uniform(0.7, 1.3) / max(len(plan) - 0.5, 1))
                 ctr = min(0.02 + 0.08 * q_mod * fmt_mod * rng.uniform(0.8, 1.2), 0.6)
@@ -107,9 +111,16 @@ async def simulate_events(content_id: str | None = None, per_content: int = 300,
                         h = min(rng.expovariate(1 / 18.0), 72.0)
                         anchor = c.created_at or now
                         ts = anchor + timedelta(hours=h)
+                        # 消费时长：仅点击/完读事件记录；完读≈基线全量，点了没读完≈35% 基线
+                        dur = 0
+                        if etype == "clicked":
+                            dur = int(rng.expovariate(1 / (fmt_secs * 0.35)))
+                        elif etype == "finished":
+                            dur = int(rng.expovariate(1 / fmt_secs))
                         session.add(ContentEvent(
                             content_id=c.id, event_type=etype, market=c.market,
-                            platform=slot.get("platform", "feed"), format=fmt, ts=ts))
+                            platform=slot.get("platform", "feed"), format=fmt, ts=ts,
+                            read_duration_s=dur))
                         total += 1
         await session.commit()
     return {

@@ -160,6 +160,8 @@ class ContentEvent(Base):
     market: Mapped[str] = mapped_column(String(8), default="")
     platform: Mapped[str] = mapped_column(String(32), default="")
     format: Mapped[str] = mapped_column(String(24), default="article")
+    # 消费时长（秒）：clicked/finished 事件记录，0 = 未记录（曝光/互动类事件）
+    read_duration_s: Mapped[int] = mapped_column(Integer, default=0)
     ts: Mapped[datetime] = mapped_column(default=_now)
 
 
@@ -249,6 +251,13 @@ async def migrate_db() -> None:
             "CREATE TABLE IF NOT EXISTS human_calibrations ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT, content_id VARCHAR(36), "
             "rater VARCHAR(64), scores JSON, reasons JSON, created_at TIMESTAMP)"))
+
+        # content_events.read_duration_s：消费时长（秒），旧快照库补列
+        res = await conn.execute(text("PRAGMA table_info(content_events)"))
+        ecols = {row[1] for row in res}
+        if "read_duration_s" not in ecols:
+            await conn.execute(text(
+                "ALTER TABLE content_events ADD COLUMN read_duration_s INTEGER DEFAULT 0"))
 
         # prompts：M3 闭环版本治理扩展列
         res = await conn.execute(text("PRAGMA table_info(prompts)"))
