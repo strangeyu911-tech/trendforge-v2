@@ -213,10 +213,20 @@ def write_report(here, common, per_dim, overall_rho, overall_adj, overall_exact,
     if not stricter and not looser:
         L.append("- 评委与真人系统偏差较小（|偏差|≤0.3），评委分可信度高。")
     L.append("")
-    L.append("## 4. 结论（可用于简历/面试）\n")
-    L.append(f"> 对 {len(common)} 条多市场内容进行了「真人 vs LLM 评委」双盲对齐：整体 Spearman ρ={overall_rho:.2f}，"
-             f"相邻一致率 {overall_adj:.0%}。证明 EditorAgent 的五维 Rubric 评分与人工判断高度一致，"
-             f"LLM-as-judge 可作为内容质量闸门的可信信号，而非「自己评自己」的空转。\n")
+    L.append("## 4. 结论\n")
+    # 结论必须由数据分档得出，禁止与 ρ 数值无关的固定表述
+    if overall_rho >= 0.7:
+        verdict = ("评委排序与人工判断高度一致，LLM-as-judge 可作为内容质量闸门的可信信号，"
+                   "而非「自己评自己」的空转。")
+    elif overall_rho >= 0.4:
+        verdict = ("评委排序与人工判断中等相关：趋势可用于初筛与迭代对比，pass/fail 边界样本"
+                   "仍需人工复核；扩样并校准偏差维度可进一步提升对齐。")
+    else:
+        verdict = ("评委排序与人工判断相关性弱：当前评委分不足以单独作为质量闸门信号，"
+                   "应以人工复核为主，并把「评委与真人打分标准对齐」列为下一轮迭代项。")
+    caveat = "（样本量 n<20，结论为方向性参考）" if len(common) < 20 else ""
+    L.append(f"> 对 {len(common)} 条多市场内容进行了「真人 vs LLM 评委」对齐：整体 Spearman ρ={overall_rho:.2f}，"
+             f"相邻一致率 {overall_adj:.0%}{caveat}。{verdict}\n")
 
     any_reason = any(
         isinstance(human_scores[c][d], dict) and human_scores[c][d].get("reason")
@@ -238,7 +248,6 @@ def write_report(here, common, per_dim, overall_rho, overall_adj, overall_exact,
             L.append("")
 
     (here / "calibration_report.md").write_text("\n".join(L), encoding="utf-8")
-    write_chart(here, per_dim, overall_rho, overall_adj, overall_exact, len(common))
 
 
 def write_chart(here, per_dim, overall_rho, overall_adj, overall_exact, n):
