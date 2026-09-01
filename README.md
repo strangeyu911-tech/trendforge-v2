@@ -25,7 +25,7 @@ V2 回答的是更进一步的问题：**AI 能不能像一支内容团队一样
 SENSE 感知      SignalScout → TrendAnalyst → AudienceInsight → AngleEditor
 PRODUCE 生产    Researcher → Writer → TopicGuard → FactChecker → Editor（revise 回退 ≤2 轮）
 AMPLIFY 放大    FormatAdapter → Distributor
-EVALUATE 进化   FeedbackAnalyst（离线：消费数据 → 评估报告 → 迭代建议）
+EVALUATE 进化   FeedbackAnalyst + KBCurator（离线：消费反馈迭代建议 / KB 覆盖度补丁）
 ```
 
 - **拓扑固定，行为可配**：链路顺序是领域最佳实践，不做可拖拽 DAG；可配的是 Prompt 模板、市场档案、Rubric。这是有意的工程判断，不是偷懒。
@@ -40,7 +40,7 @@ cd src
 pip install -r requirements.txt
 export DEEPSEEK_API_KEY=<your key>   # 不配置也能跑（全链路规则兜底降级）
 
-python main.py seed          # 初始化：5 市场档案 + 28 篇 KB + 12 个 Prompt 模板
+python main.py seed          # 初始化：5 市场档案 + 28 篇 KB + 14 个 Prompt 模板
 python main.py serve         # http://localhost:8000/docs
 python main.py run JP        # 端到端跑一次日本市场供给
 python main.py simulate      # 模拟消费事件（反馈闭环演示）
@@ -51,7 +51,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 ## 关键设计文档
 
 - [docs/PRD.md](docs/PRD.md) — 产品定位、四段式架构、功能范围、设计原则
-- [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) — 12 个 Agent 的输入/输出/判断/降级规格
+- [docs/AGENT_DESIGN.md](docs/AGENT_DESIGN.md) — 13 个 Agent 的输入/输出/判断/降级规格
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — 数据模型、API、检索方案取舍
 
 ## PM 设计文档（M4 · `v2.5-pm-docs`）
@@ -111,7 +111,7 @@ v2_trendforge/
 ├── docs/                  # PRD / Agent 设计 / 数据模型
 ├── src/
 │   ├── app/
-│   │   ├── agents/        # 12 个 Agent + base（RunContext/决策日志/降级/ev清洗）
+│   │   ├── agents/        # 13 个 Agent + base（RunContext/决策日志/降级/ev清洗）
 │   │   ├── workflow/      # 固定拓扑编排器（Editor 回退循环）
 │   │   ├── rag/           # BM25 + KB 灌库 + 检索
 │   │   ├── prompts/       # 模板文件化（templates/*.md）

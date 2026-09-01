@@ -73,11 +73,11 @@
 
 | 源 | 端点 | 提供的真实数据 | 角色 |
 |---|---|---|---|
-| HN Algolia | `hn.algolia.com/api/v1/search`（按市场关键词 + `date_range=past_month`） | **真实 points / num_comments**（人类投票与讨论） | 主源·按市场区分 |
-| Dev.to | `dev.to/api/articles?tag=...&state=rising` | **真实 reactions / comments**，按 tag 覆盖类目 | 主源·稳定兜底 |
-| GDELT DOC 2.0 | `api.gdeltproject.org/api/v2/doc/doc`（best-effort） | 全球新闻、按国家码过滤、tone | 增强·本地化新闻 |
+| HN Algolia | `hn.algolia.com/api/v1/search`（按市场关键词 + `date_range=past_month`） | **真实 points / num_comments**（人类投票与讨论） | 主源·按市场关键词检索（来源为全球英文社区，来源地区标 `GLOBAL`） |
+| Dev.to | `dev.to/api/articles?tag=...&state=rising` | **真实 reactions / comments**，按 tag 覆盖类目 | 主源·稳定兜底（来源地区标 `GLOBAL`） |
+| GDELT DOC 2.0 | `api.gdeltproject.org/api/v2/doc/doc`（best-effort） | 全球新闻、`sourcecountry`+`sourcelang` 双过滤（本地语言新闻）、tone | 增强·本地语言新闻 |
 
-HN / Dev.to 是英文技术社区，覆盖的是各市场 interests 主类目（ai/tech/business）——符合 SignalScout「跨市场信号也算相关」的设计。
+HN / Dev.to 是英文技术社区：它们提供的是**跨市场的全球英文信号**（`country=GLOBAL`），不是各市场的本地内容——系统按「跨市场信号也算相关」设计消费它们。**本地内容信号依赖 GDELT 按国家码+语言过滤**（best-effort，限流时该市场退化为纯 GLOBAL 信号）；本地主流媒体 RSS 与社媒趋势信号的接入方案见 `SOCIAL_SIGNAL_DESIGN`（规划中）。
 GDELT 用 FIPS 国家码，市场映射：`US→US`、`JP→JA`、`KR→KS`、`BR→BR`、`CN→CH`。
 
 **关键设计点**
