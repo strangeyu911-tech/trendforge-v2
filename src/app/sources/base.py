@@ -59,6 +59,14 @@ async def http_get_json(url: str, *, params: dict | None = None,
         return r.json()
 
 
+async def http_get_text(url: str, *, timeout: float = HTTP_TIMEOUT) -> str:
+    async with httpx.AsyncClient(timeout=timeout, headers={"User-Agent": UA},
+                                follow_redirects=True) as c:
+        r = await c.get(url)
+        r.raise_for_status()
+        return r.text
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 

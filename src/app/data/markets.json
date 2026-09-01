@@ -15,6 +15,10 @@
       "避免政治站队与党派 framing",
       "尊重个人主义叙事：工具赋能个人 > 集体效率"
     ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (US)",
+      "Pew Research Center: State of the News Media"
+    ],
     "interests": {"ai": 0.9, "tech": 0.8, "business": 0.7, "sports": 0.5, "entertainment": 0.6},
     "platforms": {
       "x": {"formats": ["brief_news", "card"], "audience": "科技从业者/投资人", "peak": "工作日 9-11am ET"},
@@ -39,6 +43,10 @@
       "对 AI 取代工作的话题焦虑感强，宜采用'协作/赋能'而非'替代'叙事",
       "重视企业名与数据的准确性，错误会引发强烈负反馈",
       "职场等级文化敏感，避免直接批评特定企业"
+    ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (Japan)",
+      "総務省 情報通信メディアの利用時間と情報行動に関する調査"
     ],
     "interests": {"ai": 0.7, "tech": 0.8, "business": 0.6, "sports": 0.6, "entertainment": 0.9},
     "platforms": {
@@ -65,6 +73,10 @@
       "竞争激烈的社会氛围使'效率/竞争力'角度共鸣强",
       "避免涉及历史与领土争议话题"
     ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (South Korea)",
+      "DataReportal Digital 2025: South Korea"
+    ],
     "interests": {"ai": 0.8, "tech": 0.9, "business": 0.6, "sports": 0.5, "entertainment": 0.9},
     "platforms": {
       "naver": {"formats": ["article", "card"], "audience": "大众读者", "peak": "全天"},
@@ -89,6 +101,10 @@
       "足球是国民话题，跨界内容（科技×足球）表现好",
       "对物价、就业、中国投资等经济话题敏感且关心",
       "避免刻板印象与贫富差距 framing"
+    ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (Brazil)",
+      "DataReportal Digital 2025: Brazil"
     ],
     "interests": {"ai": 0.5, "tech": 0.6, "business": 0.7, "sports": 1.0, "entertainment": 0.8},
     "platforms": {
@@ -115,6 +131,10 @@
       "数据与信源必须准确，读者考据能力强",
       "遵守内容合规要求，不涉及敏感政治话题"
     ],
+    "insight_sources": [
+      "CNNIC 中国互联网络发展状况统计报告",
+      "DataReportal Digital 2025: China"
+    ],
     "interests": {"ai": 0.9, "tech": 0.8, "business": 0.8, "sports": 0.5, "entertainment": 0.6},
     "platforms": {
       "wechat": {"formats": ["article", "card"], "audience": "专业人士/深度读者", "peak": "早 8-9 / 晚 21-23"},
@@ -123,5 +143,63 @@
     },
     "tone": "专业、克制、有信息增量",
     "default_style": "deep_dive"
+  },
+  {
+    "code": "GB",
+    "name": "英国",
+    "language": "en",
+    "timezone": "Europe/London",
+    "media_landscape": {
+      "mainstream": ["BBC", "The Guardian", "The Times", "Financial Times"],
+      "social": ["X", "WhatsApp", "YouTube", "Reddit"],
+      "notes": "BBC 公共广播传统是公信力锚点；全国性报纸党派分化明显，读者按立场分层消费"
+    },
+    "culture_notes": [
+      "克制低调（understatement）的表达受青睐，反感夸张煽情标题",
+      "对'夸大宣传'警惕性高，AI 话题倾向冷静审视而非狂热追随",
+      "自嘲式幽默可行，但讽刺需指向议题而非特定群体",
+      "北爱、王室、移民等议题避免轻浮化处理"
+    ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (UK)",
+      "Ofcom News Consumption Survey"
+    ],
+    "interests": {"ai": 0.7, "tech": 0.7, "business": 0.8, "sports": 0.7, "entertainment": 0.6},
+    "platforms": {
+      "x": {"formats": ["brief_news", "comment"], "audience": "新闻重度用户", "peak": "工作日早 7-9 / 晚 19-21"},
+      "youtube": {"formats": ["video_script"], "audience": "18-34 岁", "peak": "晚 19-22"},
+      "substack": {"formats": ["article"], "audience": "深度读者/专业人士", "peak": "周末上午"}
+    },
+    "tone": "measured, dry-witted, fact-first",
+    "default_style": "deep_dive"
+  },
+  {
+    "code": "IN",
+    "name": "印度",
+    "language": "en",
+    "timezone": "Asia/Kolkata",
+    "media_landscape": {
+      "mainstream": ["Times of India", "Hindustan Times", "YourStory", "Moneycontrol"],
+      "social": ["WhatsApp", "YouTube", "Instagram", "ShareChat"],
+      "notes": "移动端优先、流量价格敏感；英语与印地语双语受众分层明显；WhatsApp 转发是重要传播链路"
+    },
+    "culture_notes": [
+      "性价比与就业导向的内容共鸣强（技能/备考/副业视角）",
+      "板球是最大公约数话题，科技×板球跨界有效",
+      "移动端碎片化消费，短小节、快节奏结构优先",
+      "宗教与邦际政治议题高度敏感，避免涉入"
+    ],
+    "insight_sources": [
+      "Reuters Institute Digital News Report 2025 (India)",
+      "DataReportal Digital 2025: India"
+    ],
+    "interests": {"ai": 0.8, "tech": 0.9, "business": 0.8, "sports": 0.9, "entertainment": 0.8},
+    "platforms": {
+      "whatsapp": {"formats": ["brief_news", "card"], "audience": "大众用户", "peak": "早 8-10 / 晚 19-22"},
+      "youtube": {"formats": ["video_script"], "audience": "18-30 岁", "peak": "晚 19-23"},
+      "x": {"formats": ["brief_news", "comment"], "audience": "都市科技从业者", "peak": "工作日午间/晚间"}
+    },
+    "tone": "energetic, practical, aspirational",
+    "default_style": "news_roundup"
   }
 ]

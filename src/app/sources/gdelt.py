@@ -10,18 +10,22 @@ from __future__ import annotations
 from app.sources.base import RawSignal, http_get_json
 
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
-FIPS = {"US": "US", "JP": "JA", "KR": "KS", "BR": "BR", "CN": "CH"}
+FIPS = {"US": "US", "JP": "JA", "KR": "KS", "BR": "BR", "CN": "CH",
+        "GB": "UK", "IN": "IN"}
 # GDELT sourcelang 参数值：与 sourcecountry 同用，保证 JP/KR/BR/CN 市场拿到的是
 # 本地语言新闻，而非"该国出版的英文报道"——本地化信号真实性的关键一步
 SOURCELANG = {"US": "english", "JP": "japanese", "KR": "korean",
-              "BR": "portuguese", "CN": "chinese"}
-MARKET_LANGUAGE = {"US": "en", "JP": "ja", "KR": "ko", "BR": "pt", "CN": "zh"}
+              "BR": "portuguese", "CN": "chinese", "GB": "english", "IN": "english"}
+MARKET_LANGUAGE = {"US": "en", "JP": "ja", "KR": "ko", "BR": "pt", "CN": "zh",
+                   "GB": "en", "IN": "en"}
 MARKET_QUERY = {
     "US": "(artificial intelligence OR AI OR technology OR business)",
     "JP": "(Japan) (technology OR AI OR business OR robotics)",
     "KR": "(South Korea) (technology OR AI OR semiconductor OR entertainment)",
     "BR": "(Brazil) (technology OR AI OR business OR sports)",
     "CN": "(China) (technology OR AI OR business OR semiconductor)",
+    "GB": "(Britain OR UK) (technology OR AI OR business OR finance)",
+    "IN": "(India) (technology OR AI OR business OR startups)",
 }
 
 

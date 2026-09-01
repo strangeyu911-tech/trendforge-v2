@@ -78,7 +78,8 @@
 | GDELT DOC 2.0 | `api.gdeltproject.org/api/v2/doc/doc`（best-effort） | 全球新闻、`sourcecountry`+`sourcelang` 双过滤（本地语言新闻）、tone | 增强·本地语言新闻 |
 
 HN / Dev.to 是英文技术社区：它们提供的是**跨市场的全球英文信号**（`country=GLOBAL`），不是各市场的本地内容——系统按「跨市场信号也算相关」设计消费它们。**本地内容信号依赖 GDELT 按国家码+语言过滤**（best-effort，限流时该市场退化为纯 GLOBAL 信号）；本地主流媒体 RSS 与社媒趋势信号的接入方案见 `SOCIAL_SIGNAL_DESIGN`（规划中）。
-GDELT 用 FIPS 国家码，市场映射：`US→US`、`JP→JA`、`KR→KS`、`BR→BR`、`CN→CH`。
+GDELT 用 FIPS 国家码，市场映射：`US→US`、`JP→JA`、`KR→KS`、`BR→BR`、`CN→CH`、`GB→UK`、`IN→IN`。
+本地主流媒体 RSS（Yahoo!ニュース/NHK、한겨레/경향、G1、BBC、TOI）接入见 `sources/rss_local.py`，与三源并行 best-effort。
 
 **关键设计点**
 > 「HN 的 score 和 Reddit 的 upvote 是**真实的人类内容消费信号**。我用它做两件事：一是让 TrendAnalyst 的热度判断有真实依据而非 LLM 臆测；二是用真实互动分布去校准后置仿真器的参数——所以我的仿真不是拍脑袋的随机数，是有真实锚点的行为模型。」

@@ -15,9 +15,12 @@ MARKET_TAGS: dict[str, list[str]] = {
     "KR": ["ai", "webdev", "programming"],
     "BR": ["ai", "webdev", "brasil", "programming"],
     "CN": ["ai", "webdev", "python", "programming"],
+    "GB": ["ai", "webdev", "career", "programming"],
+    "IN": ["ai", "python", "webdev", "programming"],
 }
 TAG_CATEGORY = {"ai": "ai", "webdev": "tech", "programming": "tech",
-                "python": "tech", "business": "business", "brasil": "business"}
+                "python": "tech", "business": "business", "brasil": "business",
+                "career": "business"}
 
 
 async def fetch_devto(market_code: str, *, limit_per_tag: int = 10) -> list[RawSignal]:
