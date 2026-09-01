@@ -6,11 +6,13 @@ import hashlib
 import json
 import re
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from app.config import settings
 from app.models import Content, PipelineCache, SessionLocal, Task
 from app.workflow.orchestrator import run_pipeline
 
@@ -29,16 +31,27 @@ def _cache_key(market: str) -> str:
     return hashlib.sha256(f"pipeline:v2:{market}".encode()).hexdigest()
 
 
+def _cache_fresh(cached: PipelineCache | None) -> bool:
+    """缓存是否仍在 TTL 内（settings.cache_ttl_hours，默认 72h）。过期视为未命中。"""
+    if cached is None or cached.created_at is None:
+        return False
+    created = cached.created_at
+    if created.tzinfo is not None:
+        created = created.astimezone(timezone.utc).replace(tzinfo=None)
+    age_h = (datetime.utcnow() - created).total_seconds() / 3600
+    return age_h <= settings.cache_ttl_hours
+
+
 @router.post("/run")
 async def run(req: RunRequest):
     key = _cache_key(req.market)
     if not req.force:
         async with SessionLocal() as session:
             cached = await session.get(PipelineCache, key)
-            if cached:
+            if _cache_fresh(cached):
                 return {"job_id": None, "cached": True, **cached.response}
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "running", "result": None, "error": None}
+    JOBS[job_id] = {"status": "running", "market": req.market, "result": None, "error": None}
 
     async def _work():
         try:
@@ -62,11 +75,13 @@ async def job_status(job_id: str):
     if not job:
         return {"status": "unknown"}
     out = dict(job)
-    # 运行中：附带 DB 任务的实时进度（当前 agent）
+    # 运行中：附带 DB 任务的实时进度（当前 agent）。按本 job 的市场过滤，
+    # 避免多市场并发运行时进度互相串台（同市场并发仍可能重叠，属已知单进程限制）
     if job["status"] == "running":
         async with SessionLocal() as session:
             t = (await session.execute(
-                select(Task).where(Task.status == "running")
+                select(Task).where(Task.status == "running",
+                                   Task.market == job.get("market", ""))
                 .order_by(Task.created_at.desc()).limit(1))).scalars().first()
             if t:
                 out["progress"] = t.progress

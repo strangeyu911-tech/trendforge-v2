@@ -47,15 +47,16 @@ class DistributorAgent(BaseAgent):
             title=clean_ev(article["title"]),
             audience=brief.get("audience", ""),
             available_formats=json.dumps(list(formats.keys()), ensure_ascii=False),
-            tool_context="（工具尚未查询，请稍候）" if False else "",
+            tool_context="（工具尚未查询）",
         )
 
-        # 1) 尝试 native function calling：让 LLM 自主决定调用哪些工具
+        # 1) 尝试 native function calling：让 LLM 自主决定调用哪些工具；
+        #    成功时直接复用其收尾响应，避免重复一次同价 LLM 调用
         tool_calls: list[dict] = []
         time_result: dict | None = None
         peak_map: dict[str, dict] = {}
 
-        native_tc = await self._try_native_tools(ctx, system, user)
+        native_tc, native_resp = await self._try_native_tools(ctx, system, user)
         if native_tc:
             tool_calls = native_tc
             # 从 native tool_calls 结果里回收时间/平台数据
@@ -88,18 +89,22 @@ class DistributorAgent(BaseAgent):
                     "ms": int((time.time() - t0) * 1000),
                 })
 
-        # 3) 用工具真实结果注入上下文，生成最终分发 JSON
-        tool_context = format_tool_context(time_result or {}, peak_map)
-        system, user = get_pm().render(
-            self.prompt_name,
-            market=m.name, language=m.language,
-            platforms=json.dumps(m.platforms, ensure_ascii=False),
-            title=clean_ev(article["title"]),
-            audience=brief.get("audience", ""),
-            available_formats=json.dumps(list(formats.keys()), ensure_ascii=False),
-            tool_context=tool_context,
-        )
-        resp = await ctx.llm.chat(system, user, json_mode=True)
+        # 3) 生成最终分发 JSON：native 收尾响应可复用；否则把工具真实结果
+        #    注入上下文后重新渲染（程序化兜底路径）
+        if native_resp is not None:
+            resp = native_resp
+        else:
+            tool_context = format_tool_context(time_result or {}, peak_map)
+            system, user = get_pm().render(
+                self.prompt_name,
+                market=m.name, language=m.language,
+                platforms=json.dumps(m.platforms, ensure_ascii=False),
+                title=clean_ev(article["title"]),
+                audience=brief.get("audience", ""),
+                available_formats=json.dumps(list(formats.keys()), ensure_ascii=False),
+                tool_context=tool_context,
+            )
+            resp = await ctx.llm.chat(system, user, json_mode=True)
         data = extract_json(resp.text)
         plan = data.get("plan") or []
         if not isinstance(plan, list) or not plan:
@@ -124,17 +129,19 @@ class DistributorAgent(BaseAgent):
             },
         }
 
-    async def _try_native_tools(self, ctx: RunContext, system: str, user: str) -> list[dict]:
+    async def _try_native_tools(self, ctx: RunContext, system: str, user: str) -> tuple[list[dict], object]:
         """尝试让 LLM 自主决定调用工具（native function calling）。
 
-        返回结构化 tool_calls 列表；若模型不支持/未触发/出错，返回空列表，由调用方走兜底。
+        返回 (结构化 tool_calls 列表, 收尾响应)。收尾响应 = 回灌工具结果后模型的
+        最终分发 JSON 输出，调用方直接复用；若模型不支持/未触发/出错，
+        返回 ([], None)，由调用方走程序化兜底。
         """
         try:
             resp = await ctx.llm.chat_with_tools(system, user, TOOL_SCHEMAS)
         except Exception:
-            return []
+            return [], None
         if not resp.tool_calls:
-            return []
+            return [], None
 
         executed: list[dict] = []
         tool_msgs = [
@@ -160,12 +167,12 @@ class DistributorAgent(BaseAgent):
             })
         # 回灌工具结果，让模型收尾（不强制 json_mode，结果仍可 extract_json）
         try:
-            await ctx.llm.chat_with_tools(
+            final = await ctx.llm.chat_with_tools(
                 system, user, TOOL_SCHEMAS, tool_messages=tool_msgs, json_mode=True
             )
         except Exception:
-            pass
-        return executed
+            final = None
+        return executed, final
 
     async def fallback(self, ctx: RunContext, error: AgentError, inputs: dict) -> dict:
         m = ctx.market
