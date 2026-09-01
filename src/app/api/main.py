@@ -48,3 +48,15 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(kb.router, prefix="/api", tags=["kb"])
 app.include_router(prompts.router, prefix="/api", tags=["prompts"])
 app.include_router(calibration.router, prefix="/api", tags=["calibration"])
+
+# 本地开发：把运营控制台挂到 API 同源，`python main.py serve` 一条命令即可打开
+# http://localhost:8000/console（api.js 检测 localhost 自动连本地 API）。
+# Render 的 Docker 构建上下文只有 src/，ui/ 不在镜像里——目录不存在时静默跳过，
+# 线上控制台仍由独立的静态站服务（trendforge-v2-web）提供。
+from pathlib import Path  # noqa: E402
+
+_console_dir = Path(__file__).resolve().parents[3] / "ui" / "console"
+if _console_dir.is_dir():
+    from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+    app.mount("/console", StaticFiles(directory=_console_dir, html=True), name="console")

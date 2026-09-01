@@ -46,7 +46,7 @@ python main.py run JP        # 端到端跑一次日本市场供给
 python main.py simulate      # 模拟消费事件（反馈闭环演示）
 ```
 
-前端控制台：`ui/`（静态，默认连线上 API；本地开发把 `ui/console/assets/api.js` 的 API_BASE 指向 localhost:8000）。
+前端控制台：本地 `python main.py serve` 后直接打开 [http://localhost:8000/console](http://localhost:8000/console)（同源自动连本地 API）；线上为独立静态站 [https://trendforge-v2-web.onrender.com/console](https://trendforge-v2-web.onrender.com/console)。
 
 ## 关键设计文档
 
