@@ -74,13 +74,29 @@ name+version 联合唯一, content, status, created_at
 | GET | /contents?market=&limit= | 内容列表 |
 | GET | /contents/{id} | 内容详情（母稿+形态+分发+质量） |
 | GET | /contents/{id}/trace | Trace（spans + decision_log） |
+| POST | /contents/{id}/revise | 对已发布内容发起人工修订（Produce 子链重跑） |
+| POST | /contents/{id}/zh | 生成中文回译镜像 |
+| GET | /contents/jobs/{id} | 内容级异步任务（revise/zh）状态 |
 | GET | /tasks | 运行历史 |
 | POST | /events/simulate | 模拟消费事件（反馈闭环演示） |
+| GET | /analytics/center | 分析中心 8 图（QSR/漏斗/FPY/降级/成本/Rubric/衰减/形态×市场） |
+| GET | /analytics/calibration | 仿真器校准元信息 |
 | GET | /analytics/overview | 漏斗/CTR/完播/按市场拆分 |
 | GET | /analytics/reports | eval_reports 列表 |
 | POST | /analytics/run-feedback | 触发 FeedbackAnalyst |
-| GET | /prompts | Prompt 模板列表 |
-| GET | /kb/stats · /kb/search?q= | 知识库统计/检索演示 |
+| GET | /prompts | Prompt 模板列表（兼容旧入口） |
+| GET/POST | /prompts/templates · /prompts/versions | 模板与版本列表 / 手工登记新版本 |
+| POST | /prompts/versions/{id}/adopt · /prompts/versions/{a}/diff/{b} | 版本采纳（运行时覆盖层生效）/ 版本 diff |
+| GET/POST | /prompts/suggestions | FeedbackAnalyst 迭代建议列表 /（建议落库由 run-feedback 触发） |
+| POST | /prompts/suggestions/{id}/adopt · /reject | 人审闸门：采纳（生成新版本）/ 驳回 |
+| POST | /prompts/ab/run | 同选题双版 Prompt A/B 对比 |
+| POST | /prompts/feedback | 触发 FeedbackAnalyst（Prompt 域入口） |
+| GET | /kb/stats · /kb/search?q= · /kb/freshness | 知识库统计 / 检索演示 / 新鲜度 |
+| POST | /kb/curate | 触发 KBCurator 覆盖度/过期扫描 |
+| GET/POST | /kb/patches · /kb/patches/{id}/approve · /reject | KB 待审补丁 + 人审闸门 |
+| GET | /calibration/samples | 待校准内容（隐藏评委分） |
+| POST | /calibration/scores | 提交真人五维打分（落库 + 实时对齐） |
+| GET | /calibration/report | 真人 vs 评委对齐报告（markdown + SVG） |
 | GET | /bad-cases | Bad case 列表 |
 
 ## 4. LLM 配置

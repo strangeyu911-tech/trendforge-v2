@@ -2,20 +2,20 @@
 
 ## 1. 总览
 
-12 个 Agent，四段式拓扑。**主链路 1–11 固定顺序执行**（9 号 Editor 可回退 6 号 Writer，最多 2 轮）；12 号 FeedbackAnalyst 离线运行（消费数据回流后）。
+13 个 Agent，四段式拓扑。**主链路 1–11 固定顺序执行**（9 号 Editor 可回退 6 号 Writer，最多 2 轮）；12/13 号（FeedbackAnalyst / KBCurator）离线运行（消费数据回流后）。
 
 ```
 SENSE     SignalScout → TrendAnalyst → AudienceInsight → AngleEditor
 PRODUCE   Researcher → Writer → TopicGuard → FactChecker → Editor (revise→Writer, ≤2轮)
 AMPLIFY   FormatAdapter → Distributor
-EVALUATE  FeedbackAnalyst（离线闭环）
+EVALUATE  FeedbackAnalyst + KBCurator（离线闭环）
 ```
 
 ## 2. Agent 规格表
 
 | # | Agent | 输入 | 输出 | 关键判断（_decision 示例） | 降级策略 |
 |---|-------|------|------|---------------------------|---------|
-| 1 | SignalScout | 信号源（KB 近期文档/内置热榜信号） | signals[]（标题/摘要/来源/市场/类目/强度） | "从 42 篇近 7 天文档提取 12 条有效信号" | 规则提取（按类目抽样） |
+| 1 | SignalScout | 实时公开信号源：HN Algolia / Dev.to / GDELT（best-effort）；全失败降级 KB 近期文档 | signals[]（标题/角度提示/来源/来源地区/类目/真实互动/强度） | "实时拉取 42 条真实信号（HN 20 / Dev.to 22 / GDELT 0），LLM 归纳 12 条；回流 KB 8 篇" | 从本地 KB 近期文档提取 |
 | 2 | TrendAnalyst | signals[] | trends[]（主题/热度/生命周期/跨市场潜力/代表信号） | "12 信号聚为 4 趋势，AI Agent 热度最高且跨市场" | 按类目频次排序取 topN |
 | 3 | AudienceInsight | trends[], MarketProfile | insights[]（需求假设/为什么关心/情绪/风险） | "日本通勤族对'AI 抢工作'焦虑↑，需安抚型角度" | 用市场档案默认兴趣模板 |
 | 4 | AngleEditor | insights[], 市场档案, 已发布标题 | brief（选题/角度/钩子/受众/形态建议/不做清单） | "选'AI 助理进入日本职场'，角度=效率而非失业，避开焦虑叙事" | 取热度最高趋势 + 默认角度模板 |
@@ -27,6 +27,7 @@ EVALUATE  FeedbackAnalyst（离线闭环）
 | 10 | FormatAdapter | article, 形态清单 | formats{video_script, card, brief_news, comment} | "派生 4 形态，短视频脚本钩子=数据冲击型" | 模板截取（摘要=首段等） |
 | 11 | Distributor | article, formats, 市场档案 | plan（平台×形态×受众×时段×理由） | "日本主发 LINE 摘要卡（通勤场景），X 发快讯" | 市场档案默认平台×全形态 |
 | 12 | FeedbackAnalyst | contents + events | eval_report（质量/消费指标/问题/迭代建议） | "短视频脚本 CTR 高于图文 22%，建议 JP 市场加大视频权重" | 仅 SQL 统计无 LLM 建议 |
+| 13 | KBCurator | documents 覆盖度/过期扫描 + 近期信号 | kb_patches（待审知识库补丁，人审闸门同 Prompt） | "KB 缺 'AI Agent 安全'类目且 2 篇过期，建议补 3 篇" | 仅输出覆盖度统计，不出补丁 |
 
 ## 3. 关键机制
 
@@ -38,7 +39,7 @@ EVALUATE  FeedbackAnalyst（离线闭环）
 ### 3.2 失败与降级
 - `_exec()` 统一 try/except：Agent 异常 → 该 Agent 的 `fallback()`（规则兜底，span 标 degraded），主链路**永不因单点 LLM 失败整体 500**。
 - Editor 裁决 `revise` → 携带修改意见回 Writer 重写，最多 `max_review_rounds=2` 轮；`reject` → 记 bad_case 并终止该条。
-- LLM 层：指数退避重试（上限 3 次）+ 超时 60s；全部失败抛 AgentError 走 fallback。
+- LLM 层：指数退避重试（上限 3 次）+ 单调用超时 90s；全部失败抛 AgentError 走 fallback。
 
 ### 3.3 Prompt 管理
 - 所有 Prompt 存 `prompts/templates/*.md`（不内联代码），支持 `{{var}}` 渲染。

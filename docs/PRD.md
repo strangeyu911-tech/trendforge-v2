@@ -23,27 +23,29 @@ TrendForge V2 是一个**把内容供给的关键流程交给 AI 的系统**：A
 
 **核心场景**：
 1. 运营选定目标市场（如"日本"）→ 一键跑供给流水线 → 得到一篇带完整证据链、多形态派生、分发计划的内容。
-2. 运营查看每条内容的 **Trace**（10 个 Agent 各自做了什么、为什么）→ 判断系统决策是否可信。
+2. 运营查看每条内容的 **Trace**（13 个 Agent 各自做了什么、为什么）→ 判断系统决策是否可信。
 3. 运营在**评估中心**看消费数据（CTR/完播/互动/负反馈）与质量 Rubric → 看到系统给出的迭代建议 → 调整 Prompt 或市场档案，闭环。
 
 ## 3. 产品架构：供给引擎四段式
 
 ```
 ┌──────────── SENSE 感知 ────────────┐
-│ 1 SignalScout      信号捕捉         │  扫描信号源，归一化为信号流
+│ 1 SignalScout      信号捕捉         │  实时拉取 HN / Dev.to / GDELT，归一化为信号流
 │ 2 TrendAnalyst     趋势研判         │  聚类→趋势，评估热度/生命周期/跨市场潜力
 │ 3 AudienceInsight  需求洞察         │  结合市场档案回答"用户为什么关心"
 │ 4 AngleEditor      角度设计         │  输出 ContentBrief（选题+角度+钩子+形态建议）
 ├──────────── PRODUCE 生产 ──────────┤
 │ 5 Researcher       素材寻找         │  query 改写 + RAG 检索证据（强制可溯源）
 │ 6 Writer           生成             │  按 Brief + 证据成稿，强制 [ev_xxx] 引用
-│ 7 FactChecker      事实核查         │  论断↔证据核对，独立于质量审核
-│ 8 Editor           总编审核         │  质量 Rubric + 合规 + 文化敏感性，pass/revise/reject
+│ 7 TopicGuard       主题一致性闸门    │  TCS 评分拦截漂移节，定点重写/删节兜底
+│ 8 FactChecker      事实核查         │  论断↔证据核对，独立于质量审核
+│ 9 Editor           总编审核         │  质量 Rubric + 合规 + 文化敏感性，pass/revise/reject
 ├──────────── AMPLIFY 放大 ──────────┤
-│ 9 FormatAdapter    形态派生         │  一稿多发：短视频脚本/摘要卡/快讯/评论引导
-│ 10 Distributor     分发策略         │  平台×受众×时段 分发计划
+│ 10 FormatAdapter   形态派生         │  一稿多发：短视频脚本/摘要卡/快讯/评论引导
+│ 11 Distributor     分发策略         │  平台×受众×时段 分发计划（tool-calling 查本地时间/高峰）
 ├──────────── EVALUATE 进化 ─────────┤
-│ 11 FeedbackAnalyst 反馈分析         │  消费数据→评估报告→迭代建议（回流 Prompt/档案）
+│ 12 FeedbackAnalyst 反馈分析         │  消费数据→评估报告→迭代建议（回流 Prompt/档案）
+│ 13 KBCurator       知识库策展        │  覆盖度/过期扫描→待审补丁（人审闸门）
 └────────────────────────────────────┘
 ```
 
