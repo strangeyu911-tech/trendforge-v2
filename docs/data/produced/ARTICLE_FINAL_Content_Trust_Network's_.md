@@ -1,5 +1,10 @@
 # The Citation Gravity Loophole: Why Independent Writers Should Target AI's Long Tail
 
+> ⚠️ **合成 KB 演示稿**：本文由采纳版 Prompt（writer@v3）端到端实跑生成，用于验证生产与治理链路。
+> 选题与证据来自合成种子 KB（`example.com` 占位链接），文中"Content Trust Network 2026 报告"等
+> 事实与数据为**演示用途虚构**，不构成事实性内容的可信度声明。
+> 详见 [CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md](../../CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md) §2 边界声明。
+
 > 市场 US · 采用 Prompt writer@v3 · 最终漂移率 0.0 · verdict revise
 
 **摘要**：Content Trust Network's 2026 'LLM Citation Gravity' report shows AI citations are overwhelmingly concentrated in a tiny publisher elite, leaving a profitable gap for independent writers. By writing direct answers, adding cite-ready structures, and tracking AI referrals, you can turn this imbalance into a content strategy. The report's shift toward accountability makes this the right time to act.

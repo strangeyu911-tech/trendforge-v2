@@ -3,7 +3,7 @@
 > 把内容供给的关键流程交给 AI：信号捕捉、趋势研判、需求洞察、角度设计、素材寻找、生成、核查、审核、形态派生、分发策略。
 > **人负责定义标准（市场档案 / Prompt 模板 / 评估 Rubric），AI 负责执行与进化。**
 
-一个面向 **AI Native 内容智能体产品经理** 岗位的求职作品集项目。
+一个个人作品集项目：把全球化资讯内容的供给工作流抽象为可运行的 AI Agent 系统。
 
 ## 为什么有 V2
 
@@ -65,7 +65,7 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
   - 原始证据：[docs/data/RUN_EVIDENCE_v1.json](docs/data/RUN_EVIDENCE_v1.json)（任务/评分/信号/否决原文，可复现）
   - 历史版本：[docs/RUN_REPORT_v1.0.md](docs/RUN_REPORT_v1.0.md)
 - [docs/CLOSED_LOOP_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_EVIDENCE_v1.0.md) — **M3 闭环实跑证据（PM 向）**：2026-08-07 真实 LLM 跑通「FeedbackAnalyst→人审采纳→A/B」，写入覆盖层无需重启；同选题双跑质量 +0.4 / CTR +0.01 / 成本 −¥0.0681。原始证据 [docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json](docs/data/RUN_EVIDENCE_m3_closed_loop_2026-08-07.json)
-- [docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md) — **采纳版 Prompt 端到端实跑（v2.6-closed-loop-live）**：writer@v3 采纳后真实产出新内容，多轮 `revise→人审打回→重写` 把守门前漂移率从 0.2 单调降到 0.0、守门后恒为 0；自动演示 [docs/data/produced/DEMO_end2end_newcontent.html](docs/data/produced/DEMO_end2end_newcontent.html)，证据 [docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json](docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json)
+- [docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md](docs/CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md) — **采纳版 Prompt 端到端实跑（v2.6-closed-loop-live）**：writer@v3 采纳后真实产出新内容，多轮 `revise→人审打回→重写` 把守门前漂移率从 0.2 单调降到 0.0、守门后恒为 0；自动演示 [docs/data/produced/DEMO_end2end_newcontent.html](docs/data/produced/DEMO_end2end_newcontent.html)，证据 [docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json](docs/data/produced/RUN_EVIDENCE_newcontent_2026-08-07.json)。注意：该次运行的选题与证据来自合成种子 KB（事实为演示用途虚构），验证对象是生产与治理链路本身
 
 ## 分析中心（M2 · `v2.3-analytics`）
 
@@ -93,13 +93,13 @@ python main.py simulate      # 模拟消费事件（反馈闭环演示）
 
 - [docs/DRIFT_GUARD_DESIGN_v1.0.md](docs/DRIFT_GUARD_DESIGN_v1.0.md) — 主题漂移根因分析 + L0–L3 四层防护设计 + TCS 公式 + 已知局限
 - [docs/METRICS_FRAMEWORK_v1.0.md](docs/METRICS_FRAMEWORK_v1.0.md) §2.2.1 — 主题一致性（TCS）闸门指标口径与 SQL
-- 回归测试：[tools/test_drift_guard.py](tools/test_drift_guard.py)（15/15 通过）
+- 回归测试：[tools/test_drift_guard.py](tools/test_drift_guard.py)（22/22 通过，覆盖 L0–L3 四层与兜底稿中/英双语分支）
 
 ## 技术栈与取舍
 
 | 层 | 选型 | 为什么 |
 |----|------|--------|
-| API | FastAPI + SQLAlchemy async + SQLite | 单进程可跑，求职 Demo 零运维 |
+| API | FastAPI + SQLAlchemy async + SQLite | 单进程可跑，Demo 零运维 |
 | 检索 | 纯 Python BM25（<100 行） | V1 的 ChromaDB+MiniLM 让镜像 40MB、编译重；Demo 规模 BM25 足够，接口可插拔 |
 | LLM | DeepSeek（OpenAI 兼容抽象） | 推理模型输出长，默认 max_tokens 8000 + JSON 截断修复 |
 | 可靠性 | 异步 Job + 结果缓存 + 逐级降级 | 任何 Agent 失败走规则兜底，主链路永不裸 500；缓存命中秒开零额度 |
@@ -122,10 +122,4 @@ v2_trendforge/
 │   └── Dockerfile
 ├── ui/                    # 门户 + 运营控制台（原生 JS，MVP 版）
 └── render.yaml            # 后端 Docker + 前端静态站
-```
 
-## 求职叙事要点
-
-1. **业务闭环，不是技术 Demo**：信号→选题→角度→生产→审核→形态→分发→反馈→迭代建议，全链路有数据、有决策日志、有评估。
-2. **人定义标准的三个载体**：市场档案（markets.json）、Prompt 模板（templates/）、评估 Rubric（editor.md）——对应"人负责定义标准、设计系统、判断关键方向"。
-3. **有取舍的架构**：固定拓扑 vs DAG、BM25 vs 向量库、FeedbackAnalyst 只建议不自动改——每个"不做"都有理由。

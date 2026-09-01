@@ -68,7 +68,7 @@ EVALUATE  FeedbackAnalyst（离线闭环）
 
 指标落库：`content.quality.topic_guard` = TCS 评分（tcs/main_ratio/cross_docs/drift_sections/passed）。详见 [docs/DRIFT_GUARD_DESIGN_v1.0.md](docs/DRIFT_GUARD_DESIGN_v1.0.md)。
 
-## 4. 与 V1 的差异（面试叙事）
+## 4. 与 V1 的差异
 
 | 维度 | V1 | V2 |
 |------|----|----|
