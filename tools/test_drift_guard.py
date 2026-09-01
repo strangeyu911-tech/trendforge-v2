@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -153,15 +154,22 @@ def test_l1() -> None:
 def test_l2_l3() -> None:
     print("\n=== L2/L3 Writer 约束与兜底 ===")
     w = WriterAgent()
-    out = asyncio.run(w.fallback(None, None, {"brief": BRIEF, "evidences": EVIDENCES}))
-    secs = out["article"]["body"]["sections"]
-    docs = {e["doc_title"] for e in EVIDENCES
-            if f"[{e['ev_id']}]" in " ".join(s["text"] for s in secs)}
-    print(f"  兜底稿 {len(secs)} 节，引用文档：{docs}")
-    check(len(secs) == 2, "兜底稿固定 2 节（旧实现是每条证据一节）")
-    check(docs <= {"机器人量产白皮书"}, "兜底稿只引用主干文档，不做多源拼装")
-    r = score_article(out["article"], BRIEF, EVIDENCES)
-    check(r["passed"], f"兜底稿自身通过 TCS 闸门（TCS={r['tcs']}）")
+
+    # fallback 需读取 ctx.market.language 决定小标题语言（正文语言守卫引入），
+    # 离线回归用最小 stub 提供市场语言，中/英两分支都要能出稿
+    def _ctx(lang: str):
+        return SimpleNamespace(market=SimpleNamespace(language=lang))
+
+    for lang in ("zh-CN", "en-US"):
+        out = asyncio.run(w.fallback(_ctx(lang), None, {"brief": BRIEF, "evidences": EVIDENCES}))
+        secs = out["article"]["body"]["sections"]
+        docs = {e["doc_title"] for e in EVIDENCES
+                if f"[{e['ev_id']}]" in " ".join(s["text"] for s in secs)}
+        print(f"  [{lang}] 兜底稿 {len(secs)} 节，标题：{secs[0]['heading']}，引用文档：{docs}")
+        check(len(secs) == 2, f"[{lang}] 兜底稿固定 2 节（旧实现是每条证据一节）")
+        check(docs <= {"机器人量产白皮书"}, f"[{lang}] 兜底稿只引用主干文档，不做多源拼装")
+        r = score_article(out["article"], BRIEF, EVIDENCES)
+        check(r["passed"], f"[{lang}] 兜底稿自身通过 TCS 闸门（TCS={r['tcs']}）")
 
     # L2：旧规则会因「引用广度不足」而废掉一篇主线扎实的稿子
     old_need = max(2, len(EVIDENCES) // 3)
