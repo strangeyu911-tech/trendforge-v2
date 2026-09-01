@@ -1,5 +1,10 @@
 # AI Search Isn't Killing Your Traffic — It's Rerouting It. Here's How to Get Cited.
 
+> ⚠️ **合成 KB 演示稿**：本文由采纳版 Prompt（writer@v3）端到端实跑生成，用于验证生产与治理链路
+> （revise 循环 / TopicGuard / 人审闭环）。选题与证据来自合成种子 KB（`example.com` 占位链接），
+> 文中具体事实与人物（EU AI Act 执法日期、"Maya Chen"、LINE 端侧助手等）为**演示用途虚构**，
+> 不构成事实性内容的可信度声明。详见 [CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md](../../CLOSED_LOOP_LIVE_EVIDENCE_v1.0.md) §2 边界声明。
+
 > 市场 US · 采用 Prompt writer@v3 · 最终漂移率 0.0 · verdict revise
 
 **摘要**：EU regulators have started enforcing the AI Act's transparency rules for general-purpose agents, meaning tools like ChatGPT Search must show their sources. Independent publishers who structure content for citation can turn AI search into a referral channel rather than a traffic black hole.

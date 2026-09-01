@@ -23,6 +23,11 @@
 
 ## 2. 实跑结果（真实 DeepSeek LLM）
 
+> **边界声明**：本次运行验证的是**生产与治理链路**（revise 循环 / TopicGuard 闸门 / 人审闭环）。
+> 选题与证据来自种子 KB（合成语料，`example.com` 占位链接），稿中出现的具体事实与人物
+> （EU AI Act 执法日期、Perplexity "Maya Chen"、LINE 端侧助手等）为**演示用途虚构**，
+> 不构成事实性内容的可信度声明；接入真实信源后的成稿可信度由 FactChecker + KB 溯源保障。
+
 - 选题（种子，复用已知会出现漂移轨迹的题）：**ChatGPT Search's New Citation Algorithm: What Independent Publishers Must Do Now**
 - 证据：3 条（EU AI Act 执法 / Perplexity 220M 查询 / LINE 端侧助手）
 - 总耗时：≈10m54s，总成本：¥0.4445，writer 版本：v3
@@ -71,7 +76,7 @@
   5. R3 稿件 + 漂移归零 + 人审"通过"
   6. 质量五维雷达（逐轮）
   7. 最终发布态（多形态：video_script / card / brief_news / comment）
-  8. 分发计划 + 复现方式 + 面试话术
+  8. 分发计划 + 复现方式
 - 生成器：`docs/data/produced/build_demo.py`（读证据 JSON 出 HTML，与运行解耦，跑完即生成）
 
 ---
@@ -95,9 +100,3 @@ python docs/data/produced/build_demo.py
 ```
 
 > 若 Phase C 中途崩溃，脚本已落 `D:/tmp/newcontent_checkpoint.json`，设 `RESUME=1` 可只重跑 Phase C，不重花 Sense/Research/多轮 produce 的 token 与时间。
-
----
-
-## 6. 面试话术（可直接用）
-
-> 采纳 AI 建议不是让它自动改系统——那会摧毁"人定义标准"的核心。我做的是**提议→人审→采纳→可回滚→下轮对比**的闭环。这次我点了采纳 writer@v3，然后挑一条真实选题端到端跑：AI 写出初稿，TopicGuard 测出守门前漂移 20%，我作为人审打回要求重写；第二轮降到 16.7% 再打回；第三轮归零通过。全程**发布前漂移恒为 0**——人始终是标准 owner，决策成本从"自己重写 Prompt"降到"点一下"，而 AI 在每轮里把标准落到执行。
