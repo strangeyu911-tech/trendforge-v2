@@ -40,7 +40,7 @@ cd src
 pip install -r requirements.txt
 export DEEPSEEK_API_KEY=<your key>   # 不配置也能跑（全链路规则兜底降级）
 
-python main.py seed          # 初始化：5 市场档案 + 28 篇 KB + 14 个 Prompt 模板
+python main.py seed          # 初始化：7 市场档案 + 28 篇 KB + 14 个 Prompt 模板
 python main.py serve         # http://localhost:8000/docs
 python main.py run JP        # 端到端跑一次日本市场供给
 python main.py simulate      # 模拟消费事件（反馈闭环演示）

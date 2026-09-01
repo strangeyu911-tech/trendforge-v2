@@ -19,6 +19,8 @@ MARKET_QUERIES: dict[str, list[str]] = {
     "KR": ["South Korea AI", "Korean tech", "semiconductor", "K-pop"],
     "BR": ["Brazil technology", "fintech Brazil", "Brazil AI", "soccer tech"],
     "CN": ["China AI", "Chinese technology", "semiconductor China", "electric vehicles"],
+    "GB": ["UK technology", "UK AI", "London startups", "fintech UK"],
+    "IN": ["India technology", "India AI", "Indian startups", "UPI payments"],
 }
 
 # query 关键词 → 项目类目
@@ -26,7 +28,8 @@ CATEGORY_FOR = {
     "ai": "ai", "artificial intelligence": "ai", "technology": "tech", "tech": "tech",
     "startups": "business", "business": "business", "robotics": "tech",
     "k-pop": "entertainment", "soccer": "sports", "semiconductor": "tech",
-    "fintech": "business", "electric vehicles": "tech",
+    "fintech": "business", "electric vehicles": "tech", "upi payments": "business",
+    "london startups": "business",
 }
 
 
