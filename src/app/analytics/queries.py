@@ -233,9 +233,9 @@ async def spec_cost(session):
     g_cols, g_rows = await _run(session, COST_GLOBAL_SQL)
     labels = [r[0] for r in rows]
     cost_vals = [r[1] for r in rows]
-    # 成本对照（人工 vs AI）
-    avg_cost = g_rows[0][0] if g_rows else 0
-    avg_sec = g_rows[0][1] if g_rows else 0
+    # 成本对照（人工 vs AI）。空库时聚合 SQL 返回 NULL 行，须兜底为 0
+    avg_cost = (g_rows[0][0] or 0) if g_rows else 0
+    avg_sec = (g_rows[0][1] or 0) if g_rows else 0
     human_cost = round(HUMAN_MINUTES_PER_ARTICLE * HUMAN_COST_PER_MIN_CNY, 2)
     saving = round(human_cost / avg_cost, 1) if avg_cost else 0
     headline = {

@@ -26,12 +26,13 @@ class Market(Base):
     """市场档案：AI 理解当地内容生态的知识载体"""
     __tablename__ = "markets"
 
-    code: Mapped[str] = mapped_column(String(8), primary_key=True)  # US/JP/KR/BR/CN
+    code: Mapped[str] = mapped_column(String(8), primary_key=True)  # US/JP/KR/BR/CN/GB/IN
     name: Mapped[str] = mapped_column(String(64))
     language: Mapped[str] = mapped_column(String(16))
     timezone: Mapped[str] = mapped_column(String(32), default="UTC")
     media_landscape: Mapped[dict] = mapped_column(JSON, default=dict)   # 媒体/平台生态
     culture_notes: Mapped[list] = mapped_column(JSON, default=list)     # 文化语境与禁忌
+    insight_sources: Mapped[list] = mapped_column(JSON, default=list)   # 洞察依据（公开报告引用）
     interests: Mapped[dict] = mapped_column(JSON, default=dict)         # 类目→权重
     platforms: Mapped[dict] = mapped_column(JSON, default=dict)         # 平台→形态/受众/时段
     tone: Mapped[str] = mapped_column(String(64), default="")
@@ -251,6 +252,12 @@ async def migrate_db() -> None:
             "CREATE TABLE IF NOT EXISTS human_calibrations ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT, content_id VARCHAR(36), "
             "rater VARCHAR(64), scores JSON, reasons JSON, created_at TIMESTAMP)"))
+
+        # markets.insight_sources：市场档案洞察依据（公开报告引用），旧快照库补列
+        res = await conn.execute(text("PRAGMA table_info(markets)"))
+        mkcols = {row[1] for row in res}
+        if "insight_sources" not in mkcols:
+            await conn.execute(text("ALTER TABLE markets ADD COLUMN insight_sources JSON"))
 
         # content_events.read_duration_s：消费时长（秒），旧快照库补列
         res = await conn.execute(text("PRAGMA table_info(content_events)"))
