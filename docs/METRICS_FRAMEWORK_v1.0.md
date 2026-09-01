@@ -173,6 +173,7 @@ GROUP BY market;
 | 负反馈率 | `negative / exposed` | `content_events` |
 | 内容衰减曲线 | 发布后 24/48/72h 的 `exposed` 衰减 | `content_events.ts` 相对 `contents.created_at` |
 | 分市场 × 形态下钻 | 上述指标按 `market × format` 切片 | `content_events.market/format` |
+| **消费时长** | `AVG(read_duration_s)`（clicked/finished 事件，按形态/市场切片）；时长分桶 × 完读占比，定位"点了但留不住人"的形态 | `content_events.read_duration_s`（仿真器按形态基线生成） |
 
 ```sql
 -- 漏斗 + CTR/完读率（同级 CTE：先按事件类型聚合，再做比率）
@@ -233,6 +234,49 @@ GROUP BY t.market;
 ```
 
 > 定价：DeepSeek `deepseek-v4-flash`，入 ¥2 / 1M tokens、出 ¥8 / 1M tokens（`config.py` `llm_price_in/out`，仅展示用）。单条约 3–8 万 token，成本量级 ¥0.1–0.4/条。
+
+### 2.5 留存与消费时长（Retention & Dwell）—— 边界、代理指标与规模化口径
+
+**边界声明（先说不做什么）**：留存是**用户主体**指标（次日/7 日留存 = 用户维度聚合），本项目没有用户实体（`content_events` 不含 user_id），在无真实用户的 Demo 上硬造留存数字 = 造假。因此 Demo 阶段交付的是**内容侧代理指标**；规模化口径给出设计，待用户实体落地后实施。
+
+**Demo 阶段：内容侧代理指标（已实现）**
+
+| 代理指标 | 回答的问题 | 口径 |
+|---|---|---|
+| 内容衰减曲线 | 内容发出后还能"留住"消费多久？（内容侧留存形状） | `exposed` 按 `hours_since` 累计（§2.3，`DECAY_SQL` 窗口函数） |
+| 消费时长 × 完读 | 点进来的人停留多久、在哪一档流失？ | `read_duration_s` 分桶 × `finish_share`（`DURATION_FINISH_SQL`） |
+| 分形态时长 | 哪种形态天然留人？反推形态×市场权重 | `AVG(read_duration_s) GROUP BY format`（`READ_DURATION_SQL`） |
+
+**规模化阶段：真实留存口径（设计，需用户实体）**
+
+```sql
+-- 前置：content_events 需增加 user_id 维度（埋点层），本 SQL 为规模化设计稿
+-- 次日/7日留存（按内容消费定义：窗口内再次产生 clicked/finished 事件视为回访）
+WITH first_read AS (
+  SELECT user_id, MIN(date(ts)) AS first_day
+  FROM content_events
+  WHERE event_type IN ('clicked', 'finished') AND user_id IS NOT NULL
+  GROUP BY user_id
+)
+SELECT
+  f.first_day,
+  ROUND(SUM(CASE WHEN EXISTS (
+            SELECT 1 FROM content_events e
+            WHERE e.user_id = f.user_id AND date(e.ts) = date(f.first_day, '+1 day')
+              AND e.event_type IN ('clicked','finished'))
+          THEN 1 ELSE 0 END) * 1.0 / COUNT(*), 3) AS day1_retention,
+  ROUND(SUM(CASE WHEN EXISTS (
+            SELECT 1 FROM content_events e
+            WHERE e.user_id = f.user_id AND date(e.ts) BETWEEN date(f.first_day,'+1 day')
+                  AND date(f.first_day,'+7 day')
+              AND e.event_type IN ('clicked','finished'))
+          THEN 1 ELSE 0 END) * 1.0 / COUNT(*), 3) AS day7_retention
+FROM first_read f
+GROUP BY f.first_day
+ORDER BY f.first_day;
+```
+
+**留存怎么反哺供给引擎（规模化闭环）**：按"首读内容形态/品类 × 是否回访"切分留存 → 回访人群的首读品类即"引流品类"，流失人群的 last-read 品类即"流失品类" → 反馈到 `markets.json` interests 权重与 AngleEditor 的选题配比。这是内容供给侧能吃到的留存红利：**留存不是 App 的指标，是选题组合质量的滞后指标**。
 
 ---
 

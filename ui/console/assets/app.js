@@ -1004,6 +1004,8 @@ function statHead(h) {
     return `<div class="stat-big">${esc(h.value)}<span class="stat-suffix">${esc(h.suffix || '')}</span></div><div class="stat-sub">${esc(h.sub || '')}</div>`;
   if (h.kind === 'rate')
     return `<div class="stat-big">${(Number(h.value) * 100).toFixed(1)}%</div><div class="stat-sub">${esc(h.sub || '')}</div>`;
+  if (h.kind === 'stat')
+    return `<div class="stat-big">${esc(h.value)}<span class="stat-suffix">${esc(h.suffix || '')}</span></div><div class="stat-sub">${esc(h.sub || '')}</div>`;
   return '';
 }
 

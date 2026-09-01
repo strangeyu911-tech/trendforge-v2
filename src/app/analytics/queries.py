@@ -353,6 +353,52 @@ async def spec_format_market(session):
 
 
 # ---------------------------------------------------------------------------
+# 9. 消费时长分析（仿真）：分形态人均阅读时长 + 时长分桶 × 完读占比
+#    对应 JD「完播/消费时长」维度：定位"点了但留不住人"的形态
+# ---------------------------------------------------------------------------
+READ_DURATION_SQL = """
+SELECT format,
+       COUNT(*)                                                         AS samples,
+       ROUND(AVG(read_duration_s), 1)                                   AS avg_sec
+FROM content_events
+WHERE event_type IN ('clicked', 'finished') AND read_duration_s > 0
+GROUP BY format
+ORDER BY avg_sec DESC;"""
+
+DURATION_FINISH_SQL = """
+SELECT format,
+       CASE
+         WHEN read_duration_s < 15 THEN 'a.<15s'
+         WHEN read_duration_s < 45 THEN 'b.15-45s'
+         WHEN read_duration_s < 120 THEN 'c.45-120s'
+         ELSE 'd.>120s'
+       END                                                              AS bucket,
+       COUNT(*)                                                         AS n,
+       ROUND(SUM(CASE WHEN event_type = 'finished' THEN 1 ELSE 0 END) * 1.0
+             / NULLIF(COUNT(*), 0), 3)                                  AS finish_share
+FROM content_events
+WHERE event_type IN ('clicked', 'finished') AND read_duration_s > 0
+GROUP BY format, bucket
+ORDER BY format, bucket;"""
+
+
+async def spec_read_duration(session):
+    cols, rows = await _run(session, READ_DURATION_SQL)
+    b_cols, b_rows = await _run(session, DURATION_FINISH_SQL)
+    vals = [r[2] for r in rows]
+    return _spec(
+        id="read_duration", title="消费时长 · 分形态人均阅读时长（仿真）", reality="simulated",
+        sql=READ_DURATION_SQL,
+        columns=["形态", "样本", "人均时长(秒)"], rows=[(r[0], r[1], r[2]) for r in rows], chart="bar",
+        note="read_duration_s 由仿真器按形态基线生成（article≈3.5min / brief≈50s / card≈25s / "
+             "video_script≈45s），完读事件≈全量基线、点了未读完≈35% 基线。分桶×完读占比明细见 "
+             "DURATION_FINISH_SQL（本图 SQL 展示的是聚合口径）。仿真数据。",
+        headline={"kind": "stat", "value": round(sum(vals) / len(vals), 1) if vals else 0,
+                  "sub": "全形态人均时长(秒)", "suffix": "s"},
+    )
+
+
+# ---------------------------------------------------------------------------
 # 汇总
 # ---------------------------------------------------------------------------
 async def build_dashboard(session):
@@ -365,5 +411,6 @@ async def build_dashboard(session):
         await spec_rubric(session),
         await spec_decay(session),
         await spec_format_market(session),
+        await spec_read_duration(session),
     ]
     return specs
