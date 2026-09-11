@@ -91,7 +91,8 @@ async def spec_qsr(session):
         sql=QSR_BY_MARKET_SQL,
         columns=["市场", "QSR"], rows=list(zip(bar_labels, bar_vals)),
         chart="bar",
-        note="QSR = 通过发布且质量均分≥3.5 的内容 / 进入生产的选题总数。反映引擎稳定供给可用内容的能力，是供给引擎的存在意义。",
+        note="QSR = 通过发布且质量均分≥3.5 的内容 / 进入生产的选题总数。反映引擎稳定供给可用内容的能力，是供给引擎的存在意义。"
+             "若 QSR 为 0：说明现存内容多为兜底路径产出（质量均分未达 3.5 合格线）——这正是北极星指标要暴露的问题，配置真实 LLM 后应显著回升。",
         headline={"value": qsr, "sub": f"合格 {qualified} / 尝试 {attempts}", "suffix": "", "kind": "rate"},
     )
 
@@ -162,7 +163,8 @@ async def spec_fpy(session):
         sql=FPY_SQL,
         columns=["指标", "值"], rows=[("一次通过率 FPY", fpy), ("重写率", rewrite)],
         chart="bar",
-        note="FPY=首次即 pass 的内容占比；重写率=触发过 revise 轮次的内容占比。两者共同刻画链路一次成稿能力。",
+        note="FPY=首次即 pass 的内容占比；重写率=触发过 revise 轮次的内容占比。两者共同刻画链路一次成稿能力。"
+             "FPY 为 0 通常意味着现存内容含兜底/重写产物（未配置真实 LLM 时 Editor 多为规则降级，不产生 pass 裁决）。",
         headline={"value": fpy, "sub": f"重写率 {rewrite} · 尝试 {attempts}", "suffix": "", "kind": "rate"},
     )
 
@@ -390,9 +392,9 @@ async def spec_read_duration(session):
         id="read_duration", title="消费时长 · 分形态人均阅读时长（仿真）", reality="simulated",
         sql=READ_DURATION_SQL,
         columns=["形态", "样本", "人均时长(秒)"], rows=[(r[0], r[1], r[2]) for r in rows], chart="bar",
-        note="read_duration_s 由仿真器按形态基线生成（article≈3.5min / brief≈50s / card≈25s / "
-             "video_script≈45s），完读事件≈全量基线、点了未读完≈35% 基线。分桶×完读占比明细见 "
-             "DURATION_FINISH_SQL（本图 SQL 展示的是聚合口径）。仿真数据。",
+        note="阅读时长由仿真器按形态基线生成（母稿≈3.5 分钟 / 快讯≈50s / 资讯摘要卡片≈25s / "
+             "短视频脚本≈45s），完读事件≈全量基线、点了未读完≈35% 基线。分桶×完读占比明细的 SQL "
+             "见下方技术细节（本图 SQL 展示的是聚合口径）。数据为仿真口径。",
         headline={"kind": "stat", "value": round(sum(vals) / len(vals), 1) if vals else 0,
                   "sub": "全形态人均时长(秒)", "suffix": "s"},
     )

@@ -17,6 +17,30 @@ from app.services.prompt_versions import current_template_content
 # FeedbackAnalyst 可提议改写的候选模板（给 LLM 当前全文作为改写上下文）
 _SUGGESTABLE_TEMPLATES = ["writer", "editor", "distributor", "angle_editor"]
 
+# 模板代号 → 运营可读中文名（避免 [writer/结构要求] 这类内部标识出现在读者可见文案）
+TEMPLATE_CN = {
+    "writer": "写作", "editor": "总编审核", "distributor": "分发策略",
+    "angle_editor": "角度设计", "signal_scout": "信号捕捉", "trend_analyst": "趋势研判",
+    "audience_insight": "受众洞察", "researcher": "证据检索", "format_adapter": "形态适配",
+    "fact_checker": "事实核查", "topic_guard": "选题守卫", "kb_curator": "知识库治理",
+    "feedback_analyst": "反馈分析", "zh_mirror": "中文对照",
+}
+
+
+def readable_suggestions(structured: list[dict], raw_sugs: list) -> list[str]:
+    """把结构化建议翻译成运营可读的一句话；没有结构化建议时退回原始建议。"""
+    out = []
+    for s in structured:
+        tpl = str(s.get("target_template") or "")
+        cn = TEMPLATE_CN.get(tpl, tpl)
+        section = str(s.get("section") or "").strip()
+        change = str(s.get("proposed_change") or "").strip()
+        head = f"建议调整「{cn}」" if cn else "建议调整"
+        if section:
+            head += f" · {section}"
+        out.append(f"{head}：{change}" if change else head)
+    return out or [str(s) for s in raw_sugs][:6]
+
 
 class FeedbackAnalystAgent(BaseAgent):
     name = "feedback_analyst"
@@ -71,8 +95,7 @@ class FeedbackAnalystAgent(BaseAgent):
                 "new_prompt": new_prompt,
             })
         # 人类可读建议（供 EvalReport / 评估中心展示）
-        readable = [f"[{s['target_template']}/{s['section']}] {s['proposed_change']}"
-                    for s in structured] or [str(s) for s in raw_sugs][:6]
+        readable = readable_suggestions(structured, raw_sugs)
         report = {
             "metrics": stats,
             "quality_avg": _avg([p["quality_avg"] for p in per_content]),

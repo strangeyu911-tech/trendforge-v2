@@ -220,3 +220,76 @@ table.scenes td { font-size:12.5px; line-height:1.7; vertical-align:top; color:#
 /* 运行历史：同选题重跑的旧版本整行灰显，突出最新一条，消除"重复内容"体感（第四条） */
 tr.dup-old { opacity: .5; }
 tr.dup-old:hover { opacity: 1; }
+
+/* ---------- v2.1 审计整改：toast / 待办 / Agent 进度链 / 零值空态 / 校准折叠 ---------- */
+#toast-wrap { position:fixed; right:20px; bottom:20px; z-index:999; display:flex; flex-direction:column; gap:10px; max-width:380px; }
+.toast { background:#1f2a4a; color:#fff; padding:12px 16px; border-radius:10px; font-size:13px;
+         box-shadow:0 6px 24px rgba(20,27,49,.25); animation:toast-in .25s ease; }
+.toast.err { background:#8f2828; }
+.toast.out { opacity:0; transition:opacity .35s; }
+@keyframes toast-in { from { transform:translateY(8px); opacity:0 } to { transform:none; opacity:1 } }
+
+.todo-panel { border-left:4px solid #6ee7d8; }
+.todo-item { padding:6px 0; font-size:13.5px; border-bottom:1px dashed #eef1f7; }
+.todo-item:last-child { border-bottom:none; }
+
+.ag-chain { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:8px; }
+.ag-step { font-size:11.5px; padding:2px 8px; border-radius:99px; background:#f0f2f7; color:#77809a; }
+.ag-step.now { background:#2f4bd7; color:#fff; font-weight:600; }
+.ag-arrow { color:#c3cade; font-style:normal; font-size:10px; }
+
+.chart-zero { border:1px dashed #d7deec; border-radius:8px; padding:22px 16px; color:#77809a;
+              font-size:12.5px; text-align:center; background:#fafbfe; }
+
+.cal-excerpt { max-height:230px; overflow:auto; background:#f8f9fd; border:1px solid #eef1f7;
+               border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.8; color:#3c465c; white-space:pre-wrap; }
+
+.revise-advice { border-left:4px solid #e08a00; font-size:13px; line-height:1.7; }
+.fallback-note { border-left:4px solid #e08a00; color:#8a5a00; font-size:12.5px; padding:10px 14px; }
+
+/* ---------- 2026-09-12 全站审计整改：新增样式 ---------- */
+/* 仿真/合成数据的诚实标注：凡区块自带，不依赖用户去别页看说明 */
+.sim-banner, .synthetic-note { border-left:4px solid #e08a00; background:#fffaf0; color:#8a5a00;
+  font-size:12.5px; line-height:1.75; padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:16px; }
+.sim-banner code { background:#f3ece0; padding:1px 5px; border-radius:4px; font-size:12px; }
+/* Tab 分主次：过程证据类（质量/Trace）视觉后退 */
+.tabs-sep { align-self:center; padding:0 8px; color:#c2c9d8; font-size:12px; letter-spacing:1px; }
+.tabs a.tab-ev { color:#9aa3b8; }
+.tabs a.tab-ev.active { color:#2f4bd7; }
+/* 沉淀区（muted section）用于分析中心分组标题 */
+.chart-group { margin:26px 0 4px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.chart-group h2 { font-size:16px; margin:0; }
+.chart-group .grp-desc { font-size:12px; color:#77809a; }
+/* 系统进化：采纳效果回收对比卡 */
+.impact-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+.impact-card { border:1px solid #e3e8f2; border-radius:10px; padding:12px 14px; background:#fbfcfe; }
+.impact-card h4 { font-size:13px; margin-bottom:8px; }
+.impact-row { display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; color:#4a5470; }
+.impact-row b { font-variant-numeric:tabular-nums; }
+.impact-delta { margin-top:8px; font-size:12.5px; padding-top:8px; border-top:1px dashed #e3e8f2; }
+.impact-up { color:#0d9268; font-weight:600; }
+.impact-down { color:#d43d3d; font-weight:600; }
+.impact-flat { color:#77809a; }
+/* 让 <a> 也能用 .btn 样式（评估中心「生成迭代建议 →」跳转按钮） */
+a.btn { text-decoration:none; display:inline-flex; align-items:center; }
+a.btn:hover { filter:brightness(.96); text-decoration:none; }
+/* 双语文案里的中文对照行（避免与英文正文糊在一起） */
+.zh-line { padding-left:6px; }
+
+details.sql-reveal summary { cursor:pointer; font-size:12px; color:#55607a; }
+
+/* ---------- 响应式：窄屏侧边栏折叠为顶部导航，表格横向滚动 ---------- */
+@media (max-width: 900px) {
+  body { flex-direction:column; }
+  #sidebar { width:100%; height:auto; position:static; padding:10px 0 4px; flex-direction:column; }
+  .logo { padding:0 16px 8px; font-size:16px; }
+  #sidebar nav { flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  #sidebar nav a { padding:8px 12px; white-space:nowrap; border-right:none; border-bottom:3px solid transparent; }
+  #sidebar nav a.active { border-bottom-color:#6ee7d8; background:#1f2a4a; }
+  .sys-status { margin-top:4px; padding:6px 16px; }
+  #main { padding:16px; max-width:100%; }
+  .panel { padding:14px; overflow-x:auto; }
+  .cards { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .toolbar { flex-wrap:wrap; }
+  h1.page-title { font-size:19px; }
+}
