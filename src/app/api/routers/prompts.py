@@ -12,7 +12,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.models import PromptRecord, PromptSuggestion, SessionLocal
+from app.models import Content, PromptRecord, PromptSuggestion, SessionLocal
 from app.prompts.manager import TPL_DIR, get_pm
 from app.services.prompt_versions import (
     adopt_version, create_version, diff_versions, list_versions,
@@ -118,6 +118,84 @@ async def reject_suggestion(sid: str):
         s.status = "rejected"
         await session.commit()
         return {"ok": True, "status": "rejected"}
+
+
+# ---------- 采纳效果回收（闭环第四段） ----------
+def _group_stats(rows: list[dict]) -> dict:
+    """把一组「用同一版 Prompt 跑出来的任务」聚合成供对比的指标。"""
+    if not rows:
+        return {"n": 0, "quality_avg": None, "cost_avg": None,
+                "duration_avg": None, "pass": 0, "revise": 0, "reject": 0}
+    qs = [r["quality_avg"] for r in rows if r["quality_avg"] is not None]
+    costs = [r["cost"] for r in rows]
+    durs = [r["duration"] for r in rows]
+    vd = {}
+    for r in rows:
+        v = r["verdict"] or "unknown"
+        vd[v] = vd.get(v, 0) + 1
+    return {
+        "n": len(rows),
+        "quality_avg": round(sum(qs) / len(qs), 2) if qs else None,
+        "cost_avg": round(sum(costs) / len(costs), 4) if costs else None,
+        "duration_avg": round(sum(durs) / len(durs), 0) if durs else None,
+        "pass": vd.get("pass", 0), "revise": vd.get("revise", 0), "reject": vd.get("reject", 0),
+    }
+
+
+@router.get("/prompts/adoption-impact")
+async def adoption_impact():
+    """闭环第四段「效果回收」：用运行时真实数据回答「采纳之后到底变好了没有」。
+
+    口径（全部来自已落库的 tasks.prompt_versions + contents.quality，无任何补写）：
+      · 取当前每条生效版本（prompts.adopted=1），用任务记录的 prompt_versions[name] 判定归属；
+      · 「采纳前」= 同一模板用的是其它版本的任务；「采纳后」= 用上这一版之后的任务；
+      · 对比质量均分 / 单条成本 / 平均耗时 / 裁决分布，并如实带上样本数 n——
+        n 很小的时候它就是 anecdote 而不是结论，前端会据此降调提示。
+    """
+    async with SessionLocal() as session:
+        adopted_rows = (await session.execute(
+            select(PromptRecord).where(PromptRecord.adopted == 1)  # noqa: E712
+        )).scalars().all()
+        tasks = (await session.execute(select(Task))).scalars().all()
+        contents = (await session.execute(select(Content))).scalars().all()
+
+    cmap = {c.id: c for c in contents}
+    out = []
+    for rec in adopted_rows:
+        target = f"{rec.name}@{rec.version}"
+        after, before = [], []
+        for t in tasks:
+            used = (t.prompt_versions or {}).get(rec.name)
+            if not used:
+                continue
+            cid = (t.output or {}).get("content_id")
+            c = cmap.get(cid) if cid else None
+            quality = (c.quality or {}).get("avg") if c else None
+            row = {
+                "task_id": t.id, "kind": t.kind, "market": t.market,
+                "quality_avg": quality,
+                "verdict": (c.quality or {}).get("verdict") if c else None,
+                "cost": float(t.total_cost_cny or 0),
+                "duration": int(t.total_duration_ms or 0),
+                "status": t.status,
+            }
+            (after if used == target else before).append(row)
+        b, a = _group_stats(before), _group_stats(after)
+
+        def _delta(key):
+            if a[key] is None or b[key] is None:
+                return None
+            return round(a[key] - b[key], 2)
+
+        out.append({
+            "template": rec.name, "version": rec.version,
+            "adopted_at": rec.adopted_at.isoformat() if rec.adopted_at else "",
+            "source": rec.source, "parent_version": rec.parent_version or "",
+            "before": b, "after": a,
+            "delta": {"quality_avg": _delta("quality_avg"), "cost_avg": _delta("cost_avg")},
+        })
+    out.sort(key=lambda x: (x["after"]["n"] + x["before"]["n"]), reverse=True)
+    return {"adoptions": out, "note": "真实运行数据聚合，样本量见 n"}
 
 
 # ---------- A/B ----------

@@ -22,11 +22,27 @@
   .btn { padding:13px 26px; border-radius:10px; text-decoration:none; font-size:15px; font-weight:600; }
   .btn-p { background:#4f6ef7; color:#fff; }
   .btn-g { border:1px solid #3a4770; color:#b9c2d8; }
-  .agents { margin-top:56px; background:#141b31; border:1px solid #263154; border-radius:14px; padding:24px; }
-  .agents h2 { font-size:16px; margin-bottom:14px; color:#8fa4ff; }
-  .agents ol { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px 24px;
-               padding-left:20px; color:#b9c2d8; font-size:13.5px; line-height:1.7; }
-  footer { margin-top:48px; color:#5c6680; font-size:12.5px; }
+  .section { margin-top:56px; background:#141b31; border:1px solid #263154; border-radius:14px; padding:24px; }
+  .section h2 { font-size:16px; margin-bottom:8px; color:#8fa4ff; }
+  .section .hint { font-size:13px; color:#79839c; line-height:1.7; margin-bottom:16px; }
+  ol.agents { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px 24px;
+              padding-left:20px; color:#b9c2d8; font-size:13.5px; line-height:1.7; }
+  ol.agents li::marker { color:#4f6ef7; }
+  .agent-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; }
+  .agent-group h3 { font-size:13.5px; color:#6ee7d8; margin-bottom:10px; font-weight:600; }
+  /* 3 分钟演示路径 */
+  .tour { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; }
+  .tour a { display:block; text-decoration:none; background:#101730; border:1px solid #263154;
+            border-left:3px solid #4f6ef7; border-radius:10px; padding:14px 16px; }
+  .tour a:hover { border-color:#4f6ef7; background:#131c3c; }
+  .tour b { display:block; color:#e8ecf4; font-size:14px; margin-bottom:5px; }
+  .tour span { font-size:12.5px; color:#93a0bd; line-height:1.7; }
+  .tour em { font-style:normal; color:#6ee7d8; }
+  .doclinks { display:flex; gap:10px; flex-wrap:wrap; }
+  .doclinks a { font-size:13px; color:#b9c2d8; text-decoration:none; border:1px solid #2c3760;
+                border-radius:8px; padding:8px 14px; }
+  .doclinks a:hover { border-color:#4f6ef7; color:#e8ecf4; }
+  footer { margin-top:48px; color:#5c6680; font-size:12.5px; line-height:1.9; }
 </style>
 </head>
 <body>
@@ -34,32 +50,98 @@
   <div class="badge">求职作品集 · AI Native 内容智能体 PM</div>
   <h1>TrendForge V2<br>AI Native 全球化内容供给引擎</h1>
   <p class="sub">
-    把内容供给的关键流程交给 AI：信号捕捉、趋势研判、需求洞察、角度设计、素材检索、
-    生成、事实核查、总编审核、多形态派生、分发策略——人负责定义标准（市场档案 / Prompt / 评估 Rubric），
+    把内容供给的关键流程交给 AI：信号捕捉、趋势研判、受众洞察、角度设计、证据检索、
+    写作、选题守卫、事实核查、总编审核、形态适配、分发策略——人负责定义标准（市场档案 / Prompt / 评估 Rubric），
     AI 在真实消费反馈中持续进化。
   </p>
   <div class="flow">
-    <div class="stage"><b>SENSE 感知</b><span>信号捕捉 → 趋势研判 → 需求洞察 → 角度设计</span></div>
-    <div class="stage"><b>PRODUCE 生产</b><span>RAG 素材 → 成稿 → 事实核查 → 总编审核</span></div>
-    <div class="stage"><b>AMPLIFY 放大</b><span>多形态派生（短视频/卡片/快讯/评论）→ 分发策略</span></div>
-    <div class="stage"><b>EVALUATE 进化</b><span>消费数据 → 评估报告 → 迭代建议</span></div>
+    <div class="stage"><b>SENSE 感知</b><span>信号捕捉 → 趋势研判 → 受众洞察 → 角度设计</span></div>
+    <div class="stage"><b>PRODUCE 生产</b><span>证据检索 → 写作 → 选题守卫 → 事实核查 → 总编审核</span></div>
+    <div class="stage"><b>AMPLIFY 放大</b><span>形态适配（短视频/卡片/快讯/评论）→ 分发策略</span></div>
+    <div class="stage"><b>EVALUATE 评估与进化</b><span>消费数据 → 评估报告 → 迭代建议 → 人工校准</span></div>
   </div>
   <div class="cta">
     <a class="btn btn-p" href="/console/">进入运营控制台 →</a>
     <a class="btn btn-g" id="api-link" href="#">API 文档 (Swagger)</a>
+    <a class="btn btn-g" href="https://github.com/strangeyu911-tech/trendforge-v2" target="_blank" rel="noopener">GitHub 源码 ↗</a>
   </div>
-  <div class="agents">
-    <h2>11 个 Agent 的固定拓扑（拓扑固定 · 行为可配）</h2>
-    <ol>
-      <li>SignalScout 信号捕捉</li><li>TrendAnalyst 趋势研判</li>
-      <li>AudienceInsight 需求洞察</li><li>AngleEditor 角度设计</li>
-      <li>Researcher 素材寻找</li><li>Writer 生成</li>
-      <li>FactChecker 事实核查</li><li>Editor 总编审核</li>
-      <li>FormatAdapter 形态派生</li><li>Distributor 分发策略</li>
-      <li>FeedbackAnalyst 反馈分析</li>
-    </ol>
+
+  <div class="section">
+    <h2>3 分钟看懂这个 Demo（按顺序点）</h2>
+    <p class="hint">控制台有 9 个模块，第一次打开容易不知道从哪看起。这条路径覆盖了最能说明问题的五站。</p>
+    <div class="tour">
+      <a href="/console/#pipeline">
+        <b>① 跑供给</b>
+        <span>选一个市场点「开始供给」，看 11 个 Agent 依次执行。
+          <em>重点：</em>任务在服务端运行，切页面或刷新都不会中断。</span></a>
+      <a href="/console/#contents">
+        <b>② 打开一条内容</b>
+        <span>母稿 + 多形态派生 + 分发计划 + 可点击溯源的真实信号 + 每一步的执行 Trace。
+          <em>重点：</em>非中文内容默认「原文 + 中文对照」。</span></a>
+      <a href="/console/#analytics">
+        <b>③ 分析中心</b>
+        <span>九张图全部由后端手写 SQL 实时算出。
+          <em>重点：</em>每张图下方可展开驱动它的真实 SQL；仿真数据的图都带「仿真」角标。</span></a>
+      <a href="/console/#calibrate">
+        <b>④ 人工校准</b>
+        <span>五维半分制打分 + 逐维理由，与 EditorAgent 的评委分做 Spearman 对齐。
+          <em>重点：</em>机器裁决和真人打分的差值，正是这个模块存在的理由。</span></a>
+      <a href="/console/#closedloop">
+        <b>⑤ 系统进化</b>
+        <span>AI 提议 → 你拍板采纳（无需重启即刻生效）→ 效果回收对比 → 随时回滚。
+          <em>重点：</em>A/B 不让机器替你判胜负，看完由人二选一。</span></a>
+    </div>
   </div>
-  <footer>TrendForge V2 · 个人作品集项目 · FastAPI + SQLite + BM25 RAG + DeepSeek</footer>
+
+  <div class="section">
+    <h2>14 个 Agent：主管线 11 + 治理/分析 3</h2>
+    <p class="hint">
+      「跑供给」页的进度条就是下面第一条流水线（含 TopicGuard 选题守卫）；另外 3 个不在主管线里，
+      分别负责知识库治理、反馈分析和中文对照。控制台里的中文名与此表完全一致。
+    </p>
+    <div class="agent-groups">
+      <div class="agent-group">
+        <h3>主管线（拓扑固定 · 行为可配）</h3>
+        <ol class="agents">
+          <li>SignalScout 信号捕捉</li><li>TrendAnalyst 趋势研判</li>
+          <li>AudienceInsight 受众洞察</li><li>AngleEditor 角度设计</li>
+          <li>Researcher 证据检索</li><li>Writer 写作</li>
+          <li>TopicGuard 选题守卫</li><li>FactChecker 事实核查</li>
+          <li>Editor 总编审核</li><li>FormatAdapter 形态适配</li>
+          <li>Distributor 分发策略</li>
+        </ol>
+      </div>
+      <div class="agent-group">
+        <h3>治理 / 分析链路</h3>
+        <ol class="agents">
+          <li>FeedbackAnalyst 反馈分析</li>
+          <li>KBCurator 知识库治理</li>
+          <li>ZhMirror 中文对照</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>设计文档</h2>
+    <p class="hint">这个项目最花时间的部分不在代码，在下面这些判断依据上。</p>
+    <div class="doclinks">
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/README.md" target="_blank" rel="noopener">README（整体介绍）</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/PRD.md" target="_blank" rel="noopener">PRD</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/METRICS_FRAMEWORK_v1.0.md" target="_blank" rel="noopener">指标体系（北极星 QSR 的推导）</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/AGENT_DESIGN.md" target="_blank" rel="noopener">Agent 设计</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/DATA_MODEL.md" target="_blank" rel="noopener">数据模型</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/SCALE_DESIGN_v1.0.md" target="_blank" rel="noopener">规模化设计</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/RUN_REPORT_v1.1.md" target="_blank" rel="noopener">真实运行报告</a>
+      <a href="https://github.com/strangeyu911-tech/trendforge-v2/blob/main/docs/PRODUCT_AUDIT_v1.0.md" target="_blank" rel="noopener">产品审计报告</a>
+    </div>
+  </div>
+
+  <footer>
+    TrendForge V2 · 个人作品集项目 · FastAPI + SQLite + BM25 RAG + DeepSeek<br>
+    诚实标注：Demo 中的消费数据（CTR/完读率等）为仿真口径，知识库为教学用合成语料——
+    页面上凡涉及这两类数据，均在所在区块自带「仿真 / 合成 KB」角标。
+  </footer>
 </div>
 <script>
   document.getElementById('api-link').href =

@@ -139,4 +139,9 @@ async def run_ab(market_code: str, template_name: str, v1_id: int, v2_id: int,
             "v1": {**r1, **m1, "version": v1.version},
             "v2": {**r2, **m2, "version": v2.version},
             "delta": delta,
+            # 已知局限，主动标注而不是假装它是结论：CTR 由 quality 派生且叠加 ±20% 随机噪声，
+            # 再用 CTR 反证 Prompt 对 quality 的改善属于循环论证。判优请以质量分/成本为准，
+            # 最终由人二选一——机器不替人拍板。
+            "note": "CTR/曝光为仿真口径（由质量分派生并叠加随机噪声），存在循环论证风险，"
+                    "仅作参考、不作为判优依据；请以质量分与成本为准，由人最终拍板。",
         }
