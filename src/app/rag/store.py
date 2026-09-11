@@ -221,6 +221,25 @@ async def collect_kb_state(session: AsyncSession) -> dict:
     }
 
 
+async def list_documents(session: AsyncSession, limit: int = 200) -> list[dict]:
+    """KB 文档清单（浏览用）：标题/来源/类目/发布时间/可信度/是否过期。"""
+    docs = (await session.execute(
+        select(Document).where(Document.retired == False)
+        .order_by(Document.published_at.desc()).limit(limit))).scalars().all()
+    ref = _reference_date(docs)
+    out = []
+    for d in docs:
+        is_stale, age = _freshness(d, ref)
+        out.append({
+            "id": d.id, "title": d.title, "source": d.source, "url": d.url,
+            "category": d.category, "country": d.country, "language": d.language,
+            "credibility": d.credibility, "published_at": d.published_at,
+            "last_verified_at": d.last_verified_at,
+            "is_stale": is_stale, "age_days": age,
+        })
+    return out
+
+
 async def apply_kb_patch(session: AsyncSession, patch: dict) -> dict:
     """应用已审核补丁：add=入库候选文档；retire=标记退役（软删，不参与检索）"""
     added = 0

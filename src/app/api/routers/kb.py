@@ -10,9 +10,16 @@ from sqlalchemy import select
 from app.agents.kb_curator import KBCuratorAgent
 from app.llm import get_llm
 from app.models import KBPatch, Market, SessionLocal, Task
-from app.rag.store import apply_kb_patch, collect_kb_state
+from app.rag.store import apply_kb_patch, collect_kb_state, list_documents
 
 router = APIRouter()
+
+
+@router.get("/kb/documents")
+async def documents(limit: int = 200):
+    """KB 文档清单（浏览用）：不再只有搜索片段，运营能看到库内到底有什么。"""
+    async with SessionLocal() as session:
+        return {"documents": await list_documents(session, limit=limit)}
 
 
 @router.get("/kb/freshness")
@@ -59,19 +66,35 @@ async def list_patches():
 
 
 @router.post("/kb/patches/{patch_id}/approve")
-async def approve_patch(patch_id: str):
-    """人审闸门：approve 才真正入库/退役"""
+async def approve_patch(patch_id: str, payload: dict | None = None):
+    """人审闸门：approve 才真正入库/退役。
+
+    payload 可选 {"item_indices": [0,2]}：只应用勾选项（逐项审批粒度）；
+    缺省 = 整单应用。
+    """
     async with SessionLocal() as session:
         p = await session.get(KBPatch, patch_id)
         if not p:
             return {"ok": False, "error": "补丁不存在"}
         if p.status != "pending":
             return {"ok": False, "error": f"补丁已 {p.status}"}
-        applied = await apply_kb_patch(session, {"items": p.items})
-        p.status = "approved"
-        p.decided_at = datetime.utcnow()
+        items = p.items or []
+        idx = None
+        if payload and isinstance(payload.get("item_indices"), list):
+            idx = [i for i in payload["item_indices"] if isinstance(i, int) and 0 <= i < len(items)]
+            if not idx:
+                return {"ok": False, "error": "未勾选任何条目"}
+            items = [items[i] for i in idx]
+        applied = await apply_kb_patch(session, {"items": items})
+        # 整单通过才关闭补丁；部分通过保留 pending 并记录已处理项，剩余项可继续审
+        if idx is None or len(idx) == len(p.items or []):
+            p.status = "approved"
+            p.decided_at = datetime.utcnow()
+        else:
+            remaining = [it for i, it in enumerate(p.items or []) if i not in idx]
+            p.items = remaining
         await session.commit()
-        return {"ok": True, "status": "approved", **applied}
+        return {"ok": True, "status": p.status, **applied}
 
 
 @router.post("/kb/patches/{patch_id}/reject")

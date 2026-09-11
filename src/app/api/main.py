@@ -24,6 +24,20 @@ async def _unhandled(request, exc):
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
 
 
+@app.middleware("http")
+async def _write_token_guard(request, call_next):
+    """写接口共享 token 闸门：配置了 TF_API_TOKEN 后，所有 POST 必须携带 X-API-Token。
+
+    动机：公网部署上跑供给/采纳 Prompt/通过 KB 补丁都是烧真钱或改系统的操作，
+    不能任何访客都能触发。未配置（本地开发默认）= 完全开放。GET 只读不受影响。
+    """
+    from app.config import settings
+    if (settings.api_token and request.method == "POST"
+            and request.headers.get("x-api-token") != settings.api_token):
+        return JSONResponse(status_code=401, content={"detail": "需要 X-API-Token（写操作鉴权失败）"})
+    return await call_next(request)
+
+
 @app.on_event("startup")
 async def startup() -> None:
     # 冷启动：工作 DB 不存在时先恢复演示快照（含预跑内容/消费事件/评估报告），
