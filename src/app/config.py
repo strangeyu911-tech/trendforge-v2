@@ -22,6 +22,10 @@ class Settings:
     llm_price_in: float = float(os.getenv("TF_LLM_PRICE_IN", "2"))
     llm_price_out: float = float(os.getenv("TF_LLM_PRICE_OUT", "8"))
 
+    # 写接口共享 token（可选）：配置后所有 POST 需带 X-API-Token 头。
+    # 公网部署（Render）设一个随机串即可防止任意访客烧 LLM 额度/改动系统；本地留空 = 不启用。
+    api_token: str = os.getenv("TF_API_TOKEN", "")
+
     # 流水线
     max_review_rounds: int = int(os.getenv("TF_MAX_REVIEW_ROUNDS", "2"))
     top_signals: int = int(os.getenv("TF_TOP_SIGNALS", "12"))

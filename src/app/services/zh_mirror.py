@@ -84,7 +84,12 @@ QUALITY_TEXT_FIELDS = ("comments", "revision_advice", "compliance_hits")
 
 
 def build_source(content: Content) -> dict:
-    """抽取需要回译的部分（不含母稿正文——正文有独立的原文阅读场景，回译成本高收益低）"""
+    """抽取需要回译的部分。
+
+    母稿正文也纳入回译（分节结构对齐）：中文运营审核产出时，母稿是默认打开的第一个
+    Tab——没有正文的中文对照，"面向中文运营的对照视图"就缺了最重要的一块。
+    正文作为独立分片翻译，失败时由 _align 回落原文，不影响其他部分。
+    """
     brief = content.brief or {}
     dist = content.distribution or {}
     plan = dist.get("plan") or []
@@ -94,7 +99,8 @@ def build_source(content: Content) -> dict:
     ]} if plan else {}
     quality = content.quality or {}
     q_src = {k: quality[k] for k in QUALITY_TEXT_FIELDS if quality.get(k)}
-    return {
+    body = content.body if isinstance(content.body, dict) else {}
+    src = {
         "title": content.title or "",
         "summary": content.summary or "",
         "brief": {k: brief[k] for k in BRIEF_FIELDS if brief.get(k)},
@@ -102,6 +108,9 @@ def build_source(content: Content) -> dict:
         "distribution": dist_src,
         "quality": q_src,
     }
+    if body.get("sections"):
+        src["body"] = {"sections": body["sections"]}
+    return src
 
 
 async def _translate_chunk(part: dict, market: str, language: str) -> tuple[dict, object]:
@@ -187,11 +196,16 @@ async def ensure_zh_mirror(session, content: Content, *, refresh: bool = False) 
                 "reason": "该内容目标市场即中文，无需回译", "translation": {}}
 
     cached = content.translation or {}
-    # 旧缓存可能只含 brief/formats，缺分发计划/质量对照；要求齐全才命中缓存
-    if cached.get("brief") and cached.get("distribution") is not None and cached.get("quality") is not None and not refresh:
+    # 旧缓存可能缺母稿正文对照（v2.11 前不回译正文）；要求含 body 才算完整命中
+    full_hit = (cached.get("brief") and cached.get("distribution") is not None
+                and cached.get("quality") is not None and cached.get("body"))
+    if full_hit and not refresh:
         return {"available": True, "cached": True, "translation": cached}
 
     if not get_llm().available:
+        if cached.get("brief"):
+            # 有旧版（缺正文）缓存且无法重生成：返回旧缓存，正文由前端回落原文
+            return {"available": True, "cached": True, "translation": cached}
         return {"available": False, "cached": False,
                 "reason": "未配置 LLM API Key，无法生成中文对照", "translation": cached}
 

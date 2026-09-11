@@ -1,9 +1,11 @@
 """人工校准路由：真人打分 ↔ LLM 评委对齐（Evaluate 段人机闭环，DB 驱动）
 
-- GET  /api/calibration/samples  返回待校准内容（标题 + 全文 + 市场 + 已有真人打分人数/均值），**隐藏评委分**
+- GET  /api/calibration/samples  返回待校准内容（标题 + 全文 + 市场 + 已有真人打分人数/均值 + 中文对照节选），**隐藏评委分**
 - POST /api/calibration/scores   接收真人打分（含 0.5 半分 + 理由），落库 human_calibrations →
                                   聚合写回 contents.human_score_avg → 库内算 Spearman 对齐
-- GET  /api/calibration/report   从 DB 实时重算并返回最新校准报告（markdown + 对齐图 SVG）
+- GET  /api/calibration/report   从 DB 实时重算并在内存生成报告（markdown + 对齐图 SVG）。
+                                  不再依赖仓库内 tools/ 文件——Render 镜像只有 src/ 也能出报告；
+                                  本地额外把 md/svg 落盘 tools/calibration/ 供「发布校准报告.bat」提交。
 
 数据模型：
   human_calibrations 每行 = 某 rater 对某内容的一次五维打分（append-only）。
@@ -12,22 +14,21 @@
 """
 from __future__ import annotations
 
-import importlib.util
-import json
 import re
-from pathlib import Path
+import sys
+import textwrap
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, text
 
+from app.config import BASE_DIR
 from app.models import Content, HumanCalibration, SessionLocal
+from app.services import alignment
 
 router = APIRouter()
 
-# 仓库根：src/app/api/routers -> parents[4] = 仓库
-REPO = Path(__file__).resolve().parents[4]
-CAL_DIR = REPO / "tools" / "calibration"
-DIMS = ["accuracy", "angle", "readability", "local_fit", "engagement"]
+CAL_DIR = BASE_DIR.parents[1] / "tools" / "calibration"
+DIMS = alignment.DIMS
 EV_RE = re.compile(r"\s*\[ev_\d+\]")
 
 
@@ -35,6 +36,7 @@ def _body_to_text(body) -> str:
     if body is None:
         return ""
     if isinstance(body, str):
+        import json
         try:
             body = json.loads(body)
         except Exception:
@@ -46,23 +48,18 @@ def _body_to_text(body) -> str:
     return str(body)
 
 
-def _clean_ev(text: str) -> str:
-    return EV_RE.sub("", text or "")
+def _zh_body_text(translation) -> str:
+    """中文镜像里的母稿正文（若有）。"""
+    if not isinstance(translation, dict):
+        return ""
+    body = translation.get("body") or {}
+    if isinstance(body, dict):
+        return "\n".join(s.get("text", "") for s in body.get("sections", []) if isinstance(s, dict))
+    return ""
 
 
-# compute_alignment.py 以文件方式加载（避免侵入式 import），缓存复用
-_ca = None
-
-
-def get_ca():
-    global _ca
-    if _ca is None:
-        spec = importlib.util.spec_from_file_location(
-            "tf_compute_alignment", str(CAL_DIR / "compute_alignment.py"))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        _ca = mod
-    return _ca
+def _clean_ev(t: str) -> str:
+    return EV_RE.sub("", t or "")
 
 
 async def _aggregate_content(session, content_id) -> dict | None:
@@ -102,8 +99,8 @@ async def _latest_reasons(session, content_id) -> dict:
 async def _recompute_alignment(session):
     """遍历全部内容：聚合真人分写回 contents.human_score_avg，并算 Spearman 对齐。
 
-    返回 (summary, per_content)：
-      summary: {overall_rho, overall_adj, overall_exact, n, common}
+    返回 (res, per_content)：
+      res: compute_core 的完整结果（含 per_dim/common/human_scores/judge_backup）
       per_content: {cid: {n_raters, avg:{dim:val}}}
     """
     contents = (await session.execute(select(Content))).scalars().all()
@@ -126,17 +123,18 @@ async def _recompute_alignment(session):
     await session.commit()
 
     if not human_map:
-        return {"overall_rho": None, "overall_adj": None, "overall_exact": None,
-                "n": 0, "common": []}, per_content
+        empty = {"overall_rho": None, "overall_adj": None, "overall_exact": None,
+                 "n": 0, "common": []}
+        return empty, per_content
 
-    ca = get_ca()
     try:
-        summary = ca.compute_alignment_core(human_map, judge_map, meta,
-                                            rater_label="HUMAN(聚合)", reasons_map=reasons_map)
+        res = alignment.compute_core(human_map, judge_map, meta, reasons_map=reasons_map)
     except ValueError:
-        summary = {"overall_rho": None, "overall_adj": None, "overall_exact": None, "common": []}
-    summary["n"] = len(summary.get("common", []))
-    return summary, per_content
+        empty = {"overall_rho": None, "overall_adj": None, "overall_exact": None, "common": []}
+        return empty, per_content
+    # 本地仓库：把报告/图落盘 tools/calibration/，供「发布校准报告.bat」提交（Render 无此目录，静默跳过）
+    alignment.write_artifacts(res, CAL_DIR)
+    return res, per_content
 
 
 @router.get("/calibration/samples")
@@ -150,12 +148,16 @@ async def calibration_samples():
         if not all(d in scores for d in DIMS):
             continue
         hsa = c.human_score_avg or {}
+        zh_text = _clean_ev(_zh_body_text(c.translation)).strip()
         out.append({
             "id": c.id,
             "market": c.market,
             "language": c.language or "",
+            "needs_zh": not (c.language or "").lower().startswith("zh"),
             "title": c.title,
             "excerpt": _clean_ev(_body_to_text(c.body).strip()),
+            # 中文镜像全文（供非中文内容的中文评审切换阅读）
+            "zh_excerpt": zh_text,
             "n_raters": hsa.get("n_raters", 0),
             "human_avg": {d: hsa.get(d) for d in DIMS},
         })
@@ -186,12 +188,15 @@ async def calibration_scores(payload: dict):
             session.add(HumanCalibration(content_id=cid, rater=rater, scores=sc, reasons=rs))
         await session.commit()
         try:
-            summary, per_content = await _recompute_alignment(session)
+            res, per_content = await _recompute_alignment(session)
+            summary = {"overall_rho": res.get("overall_rho"),
+                       "overall_adj": res.get("overall_adj"),
+                       "overall_exact": res.get("overall_exact"),
+                       "n": len(res.get("common", []))}
         except Exception as e:  # 计算/写盘异常不应让提交整体 500
-            import sys
             print(f"[calibration] 对齐计算跳过: {e!r}", file=sys.stderr)
             summary, per_content = ({"overall_rho": None, "overall_adj": None,
-                                     "overall_exact": None, "n": 0, "common": [],
+                                     "overall_exact": None, "n": 0,
                                      "compute_error": str(e)}, {})
 
     return {"ok": True, **summary, "per_content": per_content}
@@ -199,15 +204,12 @@ async def calibration_scores(payload: dict):
 
 @router.get("/calibration/report")
 async def calibration_report():
+    """从 DB 实时重算并在内存生成报告——不读仓库文件，线上/本地行为一致。"""
     async with SessionLocal() as session:
-        summary, _ = await _recompute_alignment(session)
-    if not summary.get("common"):
+        res, _ = await _recompute_alignment(session)
+    if not res.get("common"):
         raise HTTPException(404, "尚无真人校准数据，请先提交打分")
-    report_path = CAL_DIR / "calibration_report.md"
-    chart_path = CAL_DIR / "calibration_chart.svg"
-    if not report_path.exists():
-        raise HTTPException(404, "报告生成失败")
     return {
-        "markdown": report_path.read_text(encoding="utf-8"),
-        "chart": chart_path.read_text(encoding="utf-8") if chart_path.exists() else "",
+        "markdown": alignment.build_report_md(res),
+        "chart": alignment.build_chart_svg(res, len(res["common"])),
     }

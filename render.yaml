@@ -12,6 +12,8 @@ services:
         value: deepseek-v4-flash
       - key: DEEPSEEK_API_KEY
         sync: false   # 在 Render 控制台手动配置
+      - key: TF_API_TOKEN
+        sync: false   # 写接口共享 token（防止公网访客烧 LLM 额度/改系统）；控制台首次写操作时会弹窗索取
 
   # 前端：静态站（门户 + 控制台）
   - type: web

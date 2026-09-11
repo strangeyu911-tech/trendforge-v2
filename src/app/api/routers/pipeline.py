@@ -51,11 +51,17 @@ async def run(req: RunRequest):
             if _cache_fresh(cached):
                 return {"job_id": None, "cached": True, **cached.response}
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "running", "market": req.market, "result": None, "error": None}
+    JOBS[job_id] = {"status": "running", "market": req.market, "result": None,
+                    "error": None, "cancelled": False}
 
     async def _work():
         try:
             result = await run_pipeline(req.market)
+            if JOBS.get(job_id, {}).get("cancelled"):
+                # 用户已取消：结果保留在 result 里可查看，但状态不再报 done
+                JOBS[job_id] = {"status": "cancelled", "market": req.market,
+                                "result": result, "error": "用户取消", "cancelled": True}
+                return
             JOBS[job_id] = {"status": "done", "result": result, "error": None}
             async with SessionLocal() as session:
                 cache = await session.get(PipelineCache, key) or PipelineCache(key=key)
@@ -63,10 +69,30 @@ async def run(req: RunRequest):
                 session.add(cache)
                 await session.commit()
         except Exception as e:
-            JOBS[job_id] = {"status": "failed", "result": None, "error": str(e)[:300]}
+            status = "cancelled" if JOBS.get(job_id, {}).get("cancelled") else "failed"
+            JOBS[job_id] = {"status": status, "market": req.market, "result": None,
+                            "error": str(e)[:300], "cancelled": True}
 
     asyncio.create_task(_work())
     return {"job_id": job_id, "cached": False}
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str):
+    """取消运行中的任务（best-effort）。
+
+    后台协程没有协作式取消点，这里只打标记：内存任务状态转为 cancelled、
+    前端停止轮询；流水线本体若随后完成，产物仍会落库（可在内容页看到），
+    但任务状态不再报 done。同进程内保证生效，重启后自然失效。
+    """
+    job = JOBS.get(job_id)
+    if not job:
+        return {"ok": False, "error": "任务不存在或已结束"}
+    if job.get("status") not in ("running", "starting"):
+        return {"ok": False, "error": f"任务已是 {job.get('status')}"}
+    job["cancelled"] = True
+    JOBS[job_id] = {**job, "status": "cancelled", "error": "用户取消"}
+    return {"ok": True, "status": "cancelled"}
 
 
 @router.get("/jobs/{job_id}")
@@ -141,6 +167,7 @@ async def list_tasks(limit: int = 20):
             dc, is_latest, earliest = dup_meta.get(t.id, (1, True, ""))
             out.append({
                 "id": t.id, "market": t.market, "status": t.status, "progress": t.progress,
+                "kind": t.kind or "pipeline",
                 "output": task_out, "error": t.error,
                 "total_duration_ms": t.total_duration_ms, "total_cost_cny": t.total_cost_cny,
                 "created_at": t.created_at.isoformat() if t.created_at else "",
