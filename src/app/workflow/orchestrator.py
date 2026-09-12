@@ -26,6 +26,7 @@ from app.agents.trend_analyst import TrendAnalystAgent
 from app.agents.writer import WriterAgent
 from app.config import settings
 from app.llm import extract_json, get_llm
+from app.labels_cn import badcase_fix_action, badcase_root_cause, failure_kind_cn
 from app.models import BadCase, Content, Market, SessionLocal, Task
 
 
@@ -229,8 +230,64 @@ def _localized_topic_title(topic: str, language: str) -> str:
     return f"{t}: Key Developments"
 
 
-async def run_pipeline(market_code: str) -> dict:
-    """端到端跑一次供给流水线，返回 {task_id, content_id}"""
+async def _settle_bad_case(session, bad_case_id, ok: bool, reason: str = "",
+                           substitute_title: str = "", failure_kind: str = "") -> None:
+    """把一次重跑的结果回写到失败案例，构成真闭环。
+
+    成功 → status=auto_recovered，处置动作引用真实产物《标题》，落 disposed 时间；
+    失败 → 退回 open，根因改为本次真实原因，清空处置动作（还没修，就不该有处置动作）。
+    没有这个回写，界面上的「重跑」只是个标记，案例会永远停在「重跑中」。
+    """
+    if not bad_case_id:
+        return
+    bc = await session.get(BadCase, bad_case_id)
+    if not bc:
+        return
+    if ok:
+        bc.status = "auto_recovered"
+        bc.fix_action = badcase_fix_action(
+            bc.failure_kind or failure_kind or "editor_reject",
+            substitute_title=substitute_title)
+        bc.resolved_at = datetime.utcnow()
+    else:
+        bc.status = "open"
+        # 保留案例本质缺陷的定性，不被处置过程改写——否则同一条案例会在失败类型之间跳，
+        # 按类型聚合的统计随之漂移。本次失败的定性只出现在追加的根因里。
+        bc.failure_kind = bc.failure_kind or failure_kind
+        # 追加而非覆盖：原始根因是真实评审原文，重跑失败只是新加一条事实，
+        # 直接覆盖会把不可再生的证据抹掉。
+        k = failure_kind_cn(failure_kind or "run_error")
+        note = f"重跑仍失败（{k}）：{reason}" if reason else f"重跑仍失败（{k}）"
+        bc.root_cause = f"{bc.root_cause}；{note}" if bc.root_cause else note
+        bc.fix_action = ""
+        bc.resolved_at = None
+        bc.content_id = ""
+
+
+async def settle_bad_case_after_job(bad_case_id, reason: str,
+                                    failure_kind: str = "run_error") -> None:
+    """作业层兜底：run_pipeline 在进入内部 try 之前也可能抛错（例如市场代码不存在），
+    此时内部回写根本执行不到，不在作业层兜住，案例就会永远停在「重跑中」。
+
+    仅在案例仍处于「重跑中」时生效——内部回写已落库的情况下这里是空操作，避免重复记一次失败。
+    """
+    if not bad_case_id:
+        return
+    async with SessionLocal() as session:
+        bc = await session.get(BadCase, bad_case_id)
+        if not bc or bc.status != "retrying":
+            return
+        await _settle_bad_case(session, bad_case_id, ok=False, reason=reason,
+                               failure_kind=failure_kind)
+        await session.commit()
+
+
+async def run_pipeline(market_code: str, bad_case_id: int | None = None) -> dict:
+    """端到端跑一次供给流水线，返回 {task_id, content_id}
+
+    bad_case_id：由失败案例库的「重跑」入口传入，本次运行结束后把结果回写到该案例
+    （见 _settle_bad_case），使案例库具备闭环而非只记流水。
+    """
     async with SessionLocal() as session:
         market = await session.get(Market, market_code)
         if not market:
@@ -241,7 +298,8 @@ async def run_pipeline(market_code: str) -> dict:
         await session.commit()
 
         ctx = RunContext(task_id=task.id, session=session, llm=get_llm(), task=task, market=market)
-        data: dict = {"_market": market_code, "rejected_topics": []}
+        data: dict = {"_market": market_code, "rejected_topics": [],
+                      "rejected_reasons": []}
         try:
             # 主编 reject 自愈：换题重试一次（选题判断是概率事件，重试是系统设计而非碰运气）
             for attempt in range(2):
@@ -265,21 +323,28 @@ async def run_pipeline(market_code: str) -> dict:
                     if data["review"]["verdict"] == "reject":
                         raise PipelineRejected(f"总编判定不通过：{data['review'].get('comments', '')[:80]}")
                     break  # pass，跳出重试循环
-                except PipelineRejected:
+                except PipelineRejected as e:
                     if attempt == 1:
                         raise
                     data["rejected_topics"].append(data.get("brief", {}).get("topic", ""))
+                    data["rejected_reasons"].append(str(e))
                     ctx.log_decision("orchestrator", "选题/成稿被否决，换题重试一次",
                                      rejected=data["rejected_topics"])
-            # 被否决的尝试记入 BadCase Center（质量治理资产）
+            # 被否决的尝试记入失败案例库（质量治理资产）。
+            # 能走到这里说明换题重试已成功（第二次仍失败会 raise 出去），故此刻状态即已闭环，
+            # 处置动作待产物落库后用真实替代稿标题回填。
+            bad_case = None
             if data["rejected_topics"]:
-                session.add(BadCase(
-                    content_id="", category="选题质量",
-                    title=data["rejected_topics"][0],
-                    root_cause="总编判定不通过（首次尝试），已自动换题重试",
-                    fix_action="角度设计环节避开已否决选题，证据检索环节启用类目一致性过滤",
-                    status="auto_recovered",
-                ))
+                rejected_topic = data["rejected_topics"][0]
+                reason = (data["rejected_reasons"] or [""])[0]
+                kind = "no_evidence" if "证据" in reason else "editor_reject"
+                bad_case = BadCase(
+                    content_id="", category="选题质量", market=market_code,
+                    failure_kind=kind, title=rejected_topic,
+                    root_cause=badcase_root_cause(kind, rejected_topic, reason),
+                    fix_action=badcase_fix_action(kind), status="auto_recovered",
+                )
+                session.add(bad_case)
             # ---- AMPLIFY ----
             data.update(await FormatAdapterAgent()._exec(ctx, data))
             data.update(await DistributorAgent()._exec(ctx, data))
@@ -348,6 +413,14 @@ async def run_pipeline(market_code: str) -> dict:
                 is_fallback=spans_fallback,
             )
             session.add(content)
+            if bad_case is not None:
+                # 用真实产物回填处置结果：案例由一句通用结论变成可点开溯源的证据链
+                bad_case.content_id = content.id
+                bad_case.fix_action = badcase_fix_action(
+                    bad_case.failure_kind, substitute_title=content.title)
+                bad_case.resolved_at = datetime.utcnow()
+            await _settle_bad_case(session, bad_case_id, ok=True,
+                                   substitute_title=content.title)
             task.status = "done"
             task.progress = "done"
             task.output = {"content_id": content.id, "title": content.title,
@@ -381,6 +454,8 @@ async def run_pipeline(market_code: str) -> dict:
             task.progress = "rejected"
             task.error = str(pr)[:500]
             task.finished_at = datetime.utcnow()
+            await _settle_bad_case(session, bad_case_id, ok=False,
+                                   reason=str(pr)[:200], failure_kind="editor_reject")
             await ctx.persist()
             await session.commit()
             raise
@@ -389,6 +464,8 @@ async def run_pipeline(market_code: str) -> dict:
             task.progress = "failed"
             task.error = str(e)[:500]
             task.finished_at = datetime.utcnow()
+            await _settle_bad_case(session, bad_case_id, ok=False,
+                                   reason=str(e)[:200], failure_kind="run_error")
             await ctx.persist()
             await session.commit()
             raise

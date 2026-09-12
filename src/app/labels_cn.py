@@ -66,6 +66,72 @@ KIND_CN: dict[str, str] = {
     "revise": "按意见重写", "kb_curate": "知识库策展",
 }
 
+# 失败案例类型机器码 → 中文（bad_cases.failure_kind）
+FAILURE_KIND_CN: dict[str, str] = {
+    "no_evidence": "证据不足",
+    "editor_reject": "总编否决",
+    "topic_drift": "主题漂移",
+    "run_error": "运行异常",
+}
+
+# 失败案例状态机 → 中文（bad_cases.status）
+BADCASE_STATUS_CN: dict[str, str] = {
+    "open": "待人工处置",
+    "retrying": "重跑中",
+    "auto_recovered": "已自愈",
+    "archived": "已归档",
+}
+
+# 失败类型 → 该类型下系统实际会做的处置（与代码行为一致，不写没实现的机制）
+FAILURE_KIND_FIX: dict[str, str] = {
+    "no_evidence": "证据检索环节未取得足够支撑，链路主动终止（拒绝无米之炊）",
+    "editor_reject": "同一次运行内换掉被否决的选题重试：角度设计避开已否决选题，"
+                     "证据检索启用类目一致性过滤（只保留主导类目）",
+    "topic_drift": "主题一致性硬闸拦截并定点重写漂移小节",
+    "run_error": "记录异常并按市场重跑一次完整链路",
+}
+
+
+def failure_kind_cn(k: str | None) -> str:
+    key = str(k or "")
+    return FAILURE_KIND_CN.get(key, key)
+
+
+def badcase_status_cn(s: str | None) -> str:
+    key = str(s or "")
+    return BADCASE_STATUS_CN.get(key, key)
+
+
+def _wrap_topic(t: str) -> str:
+    """选题常自带书名号（《黑神话：悟空》DLC预售正式开启），此时沿用原样；
+    否则补上书名号。绝不无条件套一层，否则会拼出《《…》》。"""
+    s = (t or "").strip()
+    return s if (not s or s.startswith("《")) else f"《{s}》"
+
+
+def badcase_root_cause(failure_kind: str, topic: str, detail: str = "") -> str:
+    """失败案例根因（由真实证据拼装，不同案例自然不同）。
+
+    topic  = 本次被否决的具体选题（真实值，来自 brief.topic）
+    detail = 触发环节给出的原始判定文字（真实值，来自 raised 异常）
+    """
+    kind = failure_kind_cn(failure_kind) or "链路失败"
+    t = _wrap_topic(topic)
+    head = f"首次选题{t}未通过（{kind}）" if t else f"本次供给未通过（{kind}）"
+    d = (detail or "").strip().replace("\n", " ")
+    return f"{head}：{d}" if d else head
+
+
+def badcase_fix_action(failure_kind: str, substitute_title: str = "") -> str:
+    """失败案例处置动作。
+
+    substitute_title 非空表示这次重试真的产出了替代稿（真实值），此时把产物写进处置动作，
+    案例由此可溯源——这也是「已自愈」与「尚未闭环」的分界。
+    """
+    base = FAILURE_KIND_FIX.get(failure_kind, "记录案例并人工处置")
+    sub = (substitute_title or "").strip()
+    return f"自动换题重试成功，产出替代稿《{sub}》并发布" if sub else base
+
 
 def agent_cn(code: str | None) -> str:
     """Agent 代号 → 中文名；未登记的代号原样返回（不吞信息）。"""
