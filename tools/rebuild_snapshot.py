@@ -130,6 +130,32 @@ def main() -> None:
         touched += 1
     w("contents with human_score_avg:", touched)
 
+    # ---------- 2.5 失败案例库同步 ----------
+    # 之前漏了这张表：案例库改了状态机列、回填了文案，快照却还是旧值，部署后页面回退。
+    # 案例是真实运行产出的治理资产，直接搬运（不做任何加工）。
+    b_cols = [r[1] for r in cur.execute("PRAGMA table_info(bad_cases)").fetchall()]
+    for col, ddl in [
+        ("failure_kind", "ALTER TABLE bad_cases ADD COLUMN failure_kind VARCHAR(24) DEFAULT ''"),
+        ("market", "ALTER TABLE bad_cases ADD COLUMN market VARCHAR(8) DEFAULT ''"),
+        ("resolved_at", "ALTER TABLE bad_cases ADD COLUMN resolved_at TIMESTAMP"),
+    ]:
+        if col not in b_cols:
+            cur.execute(ddl)
+            w("added column bad_cases." + col)
+    cur.execute("delete from bad_cases")
+    lcur.execute("select * from bad_cases order by id")
+    n_bc = 0
+    for r in lcur.fetchall():
+        cur.execute(
+            "insert into bad_cases (id,content_id,category,title,root_cause,fix_action,status,"
+            "failure_kind,market,resolved_at,created_at) values (?,?,?,?,?,?,?,?,?,?,?)",
+            (r["id"], r["content_id"], r["category"], r["title"], r["root_cause"],
+             r["fix_action"], r["status"], r["failure_kind"], r["market"],
+             r["resolved_at"], r["created_at"]),
+        )
+        n_bc += 1
+    w("bad_cases synced:", n_bc)
+
     # ---------- 3. 同步缺失市场档案 ----------
     m_cols = [r[1] for r in cur.execute("PRAGMA table_info(markets)").fetchall()]
     if "insight_sources" not in m_cols:
@@ -171,7 +197,12 @@ def main() -> None:
     nh = c.fetchone()[0]
     c.execute("select count(*) from contents where human_score_avg is not null")
     nhs = c.fetchone()[0]
-    w(f"VERIFY contents={nc} markets={nm} calibrations={nh} contents_with_human_avg={nhs}")
+    c.execute("select count(*) from bad_cases")
+    nbc = c.fetchone()[0]
+    c.execute("select count(*) from bad_cases where status in ('open','retrying')")
+    nbopen = c.fetchone()[0]
+    w(f"VERIFY contents={nc} markets={nm} calibrations={nh} contents_with_human_avg={nhs} "
+      f"bad_cases={nbc} bad_cases_pending={nbopen}")
     c.execute("select code from markets order by code")
     w("markets:", [r[0] for r in c.fetchall()])
     v.close()
