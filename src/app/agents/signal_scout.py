@@ -72,8 +72,9 @@ class SignalScoutAgent(BaseAgent):
             "signals": norm, "_llm_resp": resp,
             "_decision": {
                 "reason": f"实时拉取 {diag['hn']+diag['devto']+diag['gdelt']} 条真实信号"
-                          f"（HN {diag['hn']} / Dev.to {diag['devto']} / GDELT {diag['gdelt']}）"
-                          f"，LLM 归纳 {len(norm)} 条；回流 KB {added} 篇真实文档",
+                          f"（Hacker News {diag['hn']} 条 / Dev.to {diag['devto']} 条 / "
+                          f"GDELT {diag['gdelt']} 条），归纳出 {len(norm)} 条信号；"
+                          f"同时回流 {added} 篇真实文档进知识库",
                 "details": {**diag, "kb_added": added, "real_source": True},
             },
         }
@@ -133,7 +134,7 @@ class SignalScoutAgent(BaseAgent):
         return {
             "signals": norm, "_llm_resp": resp,
             "_decision": {
-                "reason": f"真实源不可用，降级从本地 KB {len(docs)} 篇文档提取 {len(norm)} 条信号",
+                "reason": f"真实源不可用，降级为从本地知识库 {len(docs)} 篇文档提取 {len(norm)} 条信号",
                 "details": {"degraded": degraded, "real_source": False},
             },
         }

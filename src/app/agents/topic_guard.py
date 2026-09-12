@@ -39,8 +39,8 @@ class TopicGuardAgent(BaseAgent):
         report = score_article(article, brief, evidences)
         if report["passed"]:
             return {"topic_guard": report,
-                    "_decision": {"reason": f"主题一致性通过 TCS={report['tcs']}"
-                                            f"（{report['reason']}）",
+                    "_decision": {"reason": f"主题一致性通过（得分 {report['tcs']}，"
+                                            f"{report['reason']}）",
                                   "details": {"tcs": report["tcs"],
                                               "main_ratio": report["main_ratio"]}}}
 
@@ -50,7 +50,7 @@ class TopicGuardAgent(BaseAgent):
             # 结构性不达标（如主干占比不足）但无法定位到具体小节：交给下游 Editor 判
             return {"topic_guard": report,
                     "_warnings": [f"主题一致性不达标但无法定位漂移小节：{report['reason']}"],
-                    "_decision": {"reason": f"TCS={report['tcs']} 不达标（{report['reason']}），"
+                    "_decision": {"reason": f"主题一致性得分 {report['tcs']} 不达标（{report['reason']}），"
                                             f"无定点修复目标，转交 Editor"}}
 
         repaired, resp = await self._rewrite(ctx, article, brief, evidences, drift, report)
@@ -62,7 +62,7 @@ class TopicGuardAgent(BaseAgent):
         if after["passed"]:
             return {"article": repaired, "topic_guard": after, "_llm_resp": resp,
                     "_decision": {"reason": f"检出第 {[i + 1 for i in drift]} 节脱离主线，"
-                                            f"定点重写后 TCS {report['tcs']}→{after['tcs']} 通过",
+                                            f"定点重写后主题一致性得分 {report['tcs']}→{after['tcs']}，通过",
                                   "details": {"tcs_before": report["tcs"],
                                               "tcs_after": after["tcs"],
                                               "rewritten": len(drift)}}}
@@ -71,11 +71,11 @@ class TopicGuardAgent(BaseAgent):
         final, removed = _drop(repaired, after["drift_sections"])
         final_report = score_article(final, brief, evidences)
         final_report["dropped"] = removed
-        tail = (f"摘除 {removed} 节后 TCS={final_report['tcs']}" if removed
-                else "受 2 节结构下限保护未能摘除，转交 Editor 判定")
+        tail = (f"摘除 {removed} 节后主题一致性得分 {final_report['tcs']}" if removed
+                else "受 2 节结构下限保护未能摘除，转交总编审核判定")
         return {"article": final, "topic_guard": final_report, "_llm_resp": resp,
-                "_warnings": [f"重写后仍漂移（TCS {after['tcs']}），{tail}"],
-                "_decision": {"reason": f"定点重写未收敛（TCS {report['tcs']}→{after['tcs']}），"
+                "_warnings": [f"重写后仍漂移（得分 {after['tcs']}），{tail}"],
+                "_decision": {"reason": f"定点重写未收敛（主题一致性得分 {report['tcs']}→{after['tcs']}），"
                                         + tail,
                               "details": {"dropped": removed}}}
 
@@ -124,7 +124,7 @@ class TopicGuardAgent(BaseAgent):
         report = score_article(article, brief, evidences)
         if report["passed"] or not report["drift_sections"]:
             return {"topic_guard": report,
-                    "_decision": {"reason": f"兜底：重写不可用，TCS={report['tcs']} 直接放行"}}
+                    "_decision": {"reason": f"兜底：重写不可用，主题一致性得分 {report['tcs']}，直接放行"}}
         final, removed = _drop(article, report["drift_sections"])
         final_report = score_article(final, brief, evidences)
         final_report["dropped"] = removed

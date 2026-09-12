@@ -263,7 +263,7 @@ async def run_pipeline(market_code: str) -> dict:
                     # Editor 回退循环
                     data, _ = await run_revise_rounds(ctx, data)
                     if data["review"]["verdict"] == "reject":
-                        raise PipelineRejected(f"总编 reject：{data['review'].get('comments', '')[:80]}")
+                        raise PipelineRejected(f"总编判定不通过：{data['review'].get('comments', '')[:80]}")
                     break  # pass，跳出重试循环
                 except PipelineRejected:
                     if attempt == 1:
@@ -274,10 +274,10 @@ async def run_pipeline(market_code: str) -> dict:
             # 被否决的尝试记入 BadCase Center（质量治理资产）
             if data["rejected_topics"]:
                 session.add(BadCase(
-                    content_id="", category="Q",
+                    content_id="", category="选题质量",
                     title=data["rejected_topics"][0],
-                    root_cause="总编 reject（首次尝试），已自动换题重试",
-                    fix_action="AngleEditor 避开已否决选题，Researcher 启用类目一致性过滤",
+                    root_cause="总编判定不通过（首次尝试），已自动换题重试",
+                    fix_action="角度设计环节避开已否决选题，证据检索环节启用类目一致性过滤",
                     status="auto_recovered",
                 ))
             # ---- AMPLIFY ----

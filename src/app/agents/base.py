@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.labels_cn import agent_cn
 from app.llm import OpenAICompatibleLLM
 from app.models import Market, Task, TaskSpan
 from app.prompts.manager import get_pm
@@ -102,7 +103,10 @@ class BaseAgent(ABC):
     async def fallback(self, ctx: RunContext, error: AgentError, inputs: dict) -> dict: ...
 
     async def _exec(self, ctx: RunContext, inputs: dict) -> dict:
-        """执行 run：自动记录 Span + 决策日志 + 异常降级（主链路永不裸崩）"""
+        """执行 run：自动记录 Span + 决策日志 + 异常降级（主链路永不裸崩）
+
+        面向读者的文案（warnings / decision_reason）一律走中文标签层 labels_cn，
+        不把 agent 代号、枚举值直接写进给运营看的句子里。"""
         ctx.task.progress = self.name
         try:
             await ctx.session.commit()  # 让外部轮询能看到当前进度
@@ -132,9 +136,9 @@ class BaseAgent(ABC):
         except Exception as e:
             err = e if isinstance(e, AgentError) else AgentError(self.name, str(e))
             span.status = "degraded"
-            span.warnings = [f"{self.name} 使用规则兜底: {str(err)[:120]}"]
-            span.decision_reason = f"fallback: {err}"
-            ctx.log_decision(self.name, f"降级兜底: {err}")
+            span.warnings = [f"「{agent_cn(self.name)}」环节走规则兜底：{str(err)[:120]}"]
+            span.decision_reason = f"降级兜底：{err}"
+            ctx.log_decision(self.name, f"降级兜底：{err}")
             result = await self.fallback(ctx, err, inputs)
         span.duration_ms = int((time.time() - t0) * 1000)
         ctx.spans.append(span)

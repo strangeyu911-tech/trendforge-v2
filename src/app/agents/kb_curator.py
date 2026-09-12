@@ -45,7 +45,7 @@ class KBCuratorAgent(BaseAgent):
         }
 
     async def fallback(self, ctx: RunContext, error: AgentError, inputs: dict) -> dict:
-        """规则兜底：候选全量提议 add；引用 replaces 的提议 retire 旧条目"""
+        """规则兜底：候选全量提议入库；标注了「替换对象」的候选，同时提议旧条目退役"""
         state = await collect_kb_state(ctx.session)
         candidates = load_candidates()
         titles = {d.title for d in (await ctx.session.execute(select(Document))).scalars().all()}
@@ -60,7 +60,7 @@ class KBCuratorAgent(BaseAgent):
                      f"{('；退役 ' + str(sum(1 for i in items if i['action'] == 'retire')) + ' 条旧条目') if any(i['action'] == 'retire' for i in items) else ''}。"
                      f"当前过期文档 {len(state['stale'])} 篇。")
         return {"rationale": rationale, "items": items,
-                "_decision": {"reason": "兜底：候选全量提议 + replaces 触发退役，无 LLM 参与"}}
+                "_decision": {"reason": "兜底：候选全量提议入库，被标注替换对象的旧条目一并提议退役（未调用大模型）"}}
 
     @staticmethod
     def _normalize(it: dict) -> dict:

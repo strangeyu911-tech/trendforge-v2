@@ -126,8 +126,8 @@ async def spec_funnel(session):
         id="funnel", title="消费漏斗（仿真）", reality="simulated",
         sql=FUNNEL_SQL,
         columns=["环节", "人数"], rows=stages, chart="funnel",
-        note="数据来自 simulator.py 对真实互动锚点拟合后的行为仿真，UI 已标注「仿真」。CTR="
-             f"{ctr}，完读率={fin}。真实分发消费数据校招生无法获取，故用有真实锚点的仿真替代。",
+        note="数据来自仿真器（simulator.py）对真实互动锚点拟合后的行为仿真，页面已标注「仿真」。"
+             f"当前点击率={ctr}，完读率={fin}。真实分发的消费数据属平台私有，无法获取，故用有真实锚点的仿真替代。",
     )
 
 
@@ -159,12 +159,13 @@ async def spec_fpy(session):
     fpy = rows[0][1] if rows else 0
     rewrite = rows[0][2] if rows else 0
     return _spec(
-        id="fpy", title="供给效率 · 一次通过率 FPY & 重写率（真实）", reality="real",
+        id="fpy", title="供给效率 · 一次通过率 FPY 与重写率（真实）", reality="real",
         sql=FPY_SQL,
         columns=["指标", "值"], rows=[("一次通过率 FPY", fpy), ("重写率", rewrite)],
         chart="bar",
-        note="FPY=首次即 pass 的内容占比；重写率=触发过 revise 轮次的内容占比。两者共同刻画链路一次成稿能力。"
-             "FPY 为 0 通常意味着现存内容含兜底/重写产物（未配置真实 LLM 时 Editor 多为规则降级，不产生 pass 裁决）。",
+        note="一次通过率（FPY）= 首次审核即通过的内容占比；重写率 = 触发过重写轮次的内容占比。"
+             "两者共同刻画链路的一次成稿能力。一次通过率为 0，通常说明现存内容含兜底或重写产物"
+             "（未配置真实大模型时，总编审核会走规则降级，不产生「通过」裁决）。",
         headline={"value": fpy, "sub": f"重写率 {rewrite} · 尝试 {attempts}", "suffix": "", "kind": "rate"},
     )
 
@@ -194,11 +195,12 @@ async def spec_agent_degrade(session):
     # 柱状图用 degrade_rate 作为数值列（完整 SQL/列已保留在 sql/columns 字段）
     bar_rows = [(r[0], r[3]) for r in rows]
     return _spec(
-        id="agent_degrade", title="Agent 降级率（真实 · 窗口函数排名）", reality="real",
+        id="agent_degrade", title="Agent 降级率（真实 · 按脆弱度排名）", reality="real",
         sql=AGENT_DEGRADE_SQL,
-        columns=["agent", "spans", "bad", "degrade_rate", "fragility_rank"],
+        columns=["Agent", "执行步数", "降级或失败步数", "降级率", "脆弱度排名"],
         rows=bar_rows, chart="bar",
-        note="各 Agent 的 task_spans 中 degraded/failed 占比，按 RANK() 窗口函数标出最脆弱环节。降级率升 → 触发 KBCurator 补库或调 Prompt。",
+        note="统计各 Agent 的执行记录里「降级 / 失败」所占比例，再用 RANK() 窗口函数排出最脆弱的环节。"
+             "降级率上升 → 触发知识库补库，或调整该环节的提示词。",
     )
 
 
@@ -249,7 +251,7 @@ async def spec_cost(session):
     return _spec(
         id="cost", title="成本效率 · 单条成本（真实）", reality="real",
         sql=COST_SQL,
-        columns=["市场", "单条成本¥", "耗时s", "单位质量分成本", "cost_rank"],
+        columns=["市场", "单条成本¥", "耗时（秒）", "单位质量分成本", "成本排名"],
         rows=bar_rows, chart="bar",
         note=f"单条 LLM 成本 ¥{avg_cost:.3f}（{avg_sec:.0f}s）。对照：人工写一条深度稿约 {HUMAN_MINUTES_PER_ARTICLE} 分钟 ≈ ¥{human_cost:.2f}，"
              "AI 把边际成本从人力线性压到算力近常数。单位质量分成本 = 总成本 / 质量均分，越低越划算。",
@@ -283,10 +285,11 @@ async def spec_rubric(session):
     # 每个市场一行；每组柱 = 5 维。rows 已是 [market, acc, ang, rd, lf, eng, avg, ...]
     series = [{"name": d, "data": [r[i + 1] for r in rows]} for i, d in enumerate(dims)]
     return _spec(
-        id="rubric", title="质量 Rubric 五维（真实 · 按市场）", reality="real",
+        id="rubric", title="质量评分五维（真实 · 按市场）", reality="real",
         sql=RUBRIC_SQL,
         columns=["市场"] + dims, rows=rows, chart="grouped_bar",
-        note="EditorAgent 每次供给落库的五维评分（1–5）。哪个市场哪维最弱 → 定向补 market 文化注释或调 Prompt。",
+        note="总编审核 Agent 每次供给落库的五维评分（1–5 分）。哪个市场的哪一维最弱，"
+             "就定向补充该市场的文化注释，或调整对应环节的提示词。",
         headline={"series": series, "labels": labels},
     )
 
@@ -320,8 +323,8 @@ async def spec_decay(session):
     return _spec(
         id="decay", title="内容衰减曲线 · 同期群累计曝光（仿真）", reality="simulated",
         sql=DECAY_SQL,
-        columns=["market", "hours_since", "exposures", "cum"], rows=rows, chart="cohort",
-        note="按发布后小时累计曝光，观察内容生命周期。窗口函数 SUM() OVER (PARTITION BY market) 做累计。仿真数据。",
+        columns=["市场", "小时（发布后）", "曝光量", "累计曝光"], rows=rows, chart="cohort",
+        note="按发布后小时累计曝光，观察内容生命周期。用窗口函数对每个市场分别做累计求和。仿真数据。",
         headline={"series": series, "labels": [str(h) for h in hours]},
     )
 
@@ -350,7 +353,7 @@ async def spec_format_market(session):
         id="format_market", title="分形态 × 市场 CTR 下钻（仿真）", reality="simulated",
         sql=FORMAT_MARKET_SQL,
         columns=["形态"] + markets, rows=table, chart="heat",
-        note="每个单元格 = 该形态在该市场的点击率（clicked/exposed）。反向指导 format_plan 权重。仿真数据。",
+        note="每个单元格 = 该形态在该市场的点击率（点击量 ÷ 曝光量）。反向指导形态分发权重。仿真数据。",
     )
 
 
@@ -392,9 +395,9 @@ async def spec_read_duration(session):
         id="read_duration", title="消费时长 · 分形态人均阅读时长（仿真）", reality="simulated",
         sql=READ_DURATION_SQL,
         columns=["形态", "样本", "人均时长(秒)"], rows=[(r[0], r[1], r[2]) for r in rows], chart="bar",
-        note="阅读时长由仿真器按形态基线生成（母稿≈3.5 分钟 / 快讯≈50s / 资讯摘要卡片≈25s / "
-             "短视频脚本≈45s），完读事件≈全量基线、点了未读完≈35% 基线。分桶×完读占比明细的 SQL "
-             "见下方技术细节（本图 SQL 展示的是聚合口径）。数据为仿真口径。",
+        note="阅读时长由仿真器按形态基线生成（母稿≈3.5 分钟 / 快讯≈50 秒 / 资讯摘要卡片≈25 秒 / "
+             "短视频脚本≈45 秒），完读事件≈全量基线、点了未读完≈35% 基线。分桶 × 完读占比的明细 SQL "
+             "见下方技术细节（本图展示的是聚合口径）。数据为仿真口径。",
         headline={"kind": "stat", "value": round(sum(vals) / len(vals), 1) if vals else 0,
                   "sub": "全形态人均时长(秒)", "suffix": "s"},
     )

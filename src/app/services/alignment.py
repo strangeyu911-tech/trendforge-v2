@@ -121,7 +121,7 @@ def build_report_md(res: dict, rater: str = "HUMAN") -> str:
     L = []
     L.append("# TrendForge 评委校准报告\n")
     L.append(f"- 校准样本数：**{len(common)}** 条（已发布内容，跨多市场）")
-    L.append(f"- 真人标注者：`{rater}`　|　评委：EditorAgent（LLM-as-judge，五维 Rubric 1–5）")
+    L.append(f"- 真人标注者：`{rater}`　|　机器评委：总编审核环节（大模型评审，五维评分 1–5）")
     L.append(f"- 对齐方法：Spearman 秩相关 + 相邻/完全一致率 + 偏差均值\n")
 
     L.append("## 1. 整体对齐\n")
@@ -147,7 +147,7 @@ def build_report_md(res: dict, rater: str = "HUMAN") -> str:
     looser = [d for d, b in biases if b < -0.3]
     L.append("## 3. 偏差解读\n")
     if stricter:
-        L.append(f"- 评委相对真人**偏严**的维度：{', '.join(DIM_LABELS.get(d, d) for d in stricter)}（可加 prompt 缓解或人工复核阈值）。")
+        L.append(f"- 评委相对真人**偏严**的维度：{', '.join(DIM_LABELS.get(d, d) for d in stricter)}（可加提示词缓解或人工复核阈值）。")
     if looser:
         L.append(f"- 评委相对真人**偏松**的维度：{', '.join(DIM_LABELS.get(d, d) for d in looser)}。")
     if not stricter and not looser:
