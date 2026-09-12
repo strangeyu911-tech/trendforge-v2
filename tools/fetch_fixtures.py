@@ -13,10 +13,13 @@ ID = "b41a0c5c-053b-4477-aa55-6da25636d530"
 PATHS = [
     "/health", "/markets", "/contents?limit=200", "/contents?limit=5",
     f"/contents/{ID}", f"/contents/{ID}/trace",
+    # 注意：/contents/{id}/zh 是 POST（现场生成中文对照，要烧 LLM 额度），GET 只会拿到 405，
+    # 故不列入本清单；冒烟脚本里那条 NO FIXTURE 属预期，不是缺陷。
     "/pipeline/tasks?limit=50",
     "/prompts/suggestions?status=pending", "/prompts/suggestions?status=adopted",
     "/prompts/suggestions?status=all", "/prompts/templates",
-    "/prompts/versions?template=writer", "/prompts/adoption-impact",
+    "/prompts/versions?template=writer", "/prompts/versions?template=angle_editor",
+    "/prompts/adoption-impact",
     "/analytics/overview", "/analytics/reports", "/analytics/center",
     "/kb/stats", "/kb/documents", "/kb/freshness", "/kb/patches",
     "/calibration/samples", "/calibration/report", "/bad-cases",

@@ -85,7 +85,8 @@ const exposed = ['overview', 'pipeline', 'contents', 'markets', 'evalView', 'kbV
   'loadAdoptionImpact', 'loadBadCases', 'loadTasks', 'loadSuggestions', 'loadVersions',
   'loadAbVersions', 'renderABResult', 'paintAbPanel',
   'renderAnalytics', 'lb', 'lbEnum', 'stageLabel', 'kindLabel', 'sourceLabel', 'verdictTag',
-  'API', 'RunState', 'ReviseState', 'ABState'];
+  'API', 'RunState', 'ReviseState', 'ABState',
+  'badCaseCard', 'BadCaseRerun'];
 const factory = new Function(apiSrc + '\n' + appSrc + '\nreturn {' + exposed.join(',') + '};');
 let app;
 try {
@@ -214,6 +215,76 @@ async function render(name, fn) {
     console.log('✅ A/B 后台进度卡渲染（含环节 + 已运行时长）'); ok++;
   } else errors.push(`A/B 进度卡渲染异常：${runHtml.slice(0, 160)}`);
   app.ABState.job = null;
+
+  /* ---------- 失败案例库：状态驱动的卡片（v2.22） ----------
+     病灶：只有「自愈」一个终态，缺字段就塌一块；多条案例文案逐字相同。
+     本轮改为状态机（待处置 / 重跑中 / 已自愈 / 已归档），字段随状态变。 */
+  const bcOpen = {
+    id: 1, status: 'open', status_label: '待人工处置', failure_kind: 'editor_reject',
+    failure_kind_label: '总编否决', market: 'US', age_days: 38, title: '某被否决的选题',
+    root_cause: '首次选题《X》未通过（总编否决）：总分低于阈值', fix_action: '', content_id: '',
+    resolved_at: null, created_at: '2026-08-05 12:10:52',
+  };
+  const bcAuto = {
+    id: 2, status: 'auto_recovered', status_label: '已自愈', failure_kind: 'topic_rejected',
+    failure_kind_label: '选题否决', market: 'US', age_days: 38, title: '另一条选题',
+    root_cause: '首次选题《Y》未通过（选题否决）：撞已否决选题',
+    fix_action: '自动换题重试并成稿', content_id: 'abc123', resolved_at: '2026-08-05 12:11:29',
+    created_at: '2026-08-05 12:10:52',
+  };
+  const bcArch = {
+    id: 3, status: 'archived', status_label: '已归档', failure_kind: 'editor_reject',
+    failure_kind_label: '总编否决', market: 'JP', age_days: 20, title: '归档案例',
+    root_cause: 'r', fix_action: '', content_id: '', resolved_at: '2026-09-01 10:00:00',
+    created_at: '2026-08-20 10:00:00',
+  };
+  const cardCases = [
+    ['open', app.badCaseCard(bcOpen),
+      ['下一步：', 'data-bc-rerun', 'data-bc-archive', '已挂 38 天'],
+      ['自动处置', '已人工归档']],
+    ['auto_recovered', app.badCaseCard(bcAuto),
+      ['自动处置：', '查看替代稿', '#content/abc123'],
+      ['下一步：', 'data-bc-rerun', 'data-bc-archive']],
+    ['archived', app.badCaseCard(bcArch),
+      ['已人工归档'], ['下一步：', 'data-bc-rerun']],
+  ];
+  for (const [name, html, musts, mustnots] of cardCases) {
+    for (const m of musts) {
+      if (html.includes(m)) { console.log(`✅ 失败案例卡(${name}): 含「${m}」`); ok++; }
+      else errors.push(`失败案例卡(${name}) 缺少「${m}」`);
+    }
+    for (const m of mustnots) {
+      if (!html.includes(m)) { console.log(`✅ 失败案例卡(${name}): 确认无「${m}」`); ok++; }
+      else errors.push(`失败案例卡(${name}) 不应出现「${m}」（该字段对本状态无意义）`);
+    }
+  }
+  // 重跑中：给进度而不给按钮
+  app.BadCaseRerun.jobs = { 1: { job_id: 'j9', market: 'US', status: 'running', progress: 'writer', started_at: Date.now() } };
+  const bcRun = app.badCaseCard({ ...bcOpen, status: 'retrying', status_label: '重跑中' });
+  if (/正在按 US 市场重跑/.test(bcRun) && /当前环节：写作/.test(bcRun) && !bcRun.includes('data-bc-rerun')) {
+    console.log('✅ 失败案例卡(重跑中): 显示当前环节且不重复给按钮'); ok++;
+  } else errors.push(`重跑中卡片渲染异常：${bcRun.slice(0, 200)}`);
+  app.BadCaseRerun.jobs = {};
+
+  // 真实列表接口：聚合统计 + 排序（待处置 > 已自愈 > 已归档）
+  els['badcases-panel'] = mkEl('badcases-panel');
+  await render('badCases', () => app.loadBadCases());
+  const bcListHtml = els['badcases-panel'].innerHTML || '';
+  const listChecks = [
+    ['共 ', '总数统计'], ['待处置 ', '待处置计数'], ['已自愈 ', '已自愈计数'],
+    ['data-bc-rerun', '列表内有重跑入口'],
+  ];
+  for (const [needle, label] of listChecks) {
+    if (bcListHtml.includes(needle)) { console.log(`✅ 失败案例列表：${label}`); ok++; }
+    else errors.push(`失败案例列表缺少「${needle}」（${label}）`);
+  }
+  // 注意：顶部统计条里也有「待处置 / 已自愈」字样，必须用卡片内独有特征串定位，
+  // 否则比较的是两个统计标签的位置，测不出排序。
+  const iOpenCard = bcListHtml.indexOf('data-bc-rerun');   // 只有「待处置」卡才给重跑按钮
+  const iAutoCard = bcListHtml.indexOf('自动处置：');        // 只有「已自愈」卡才有这句
+  if (iOpenCard >= 0 && iAutoCard >= 0 && iOpenCard < iAutoCard) {
+    console.log('✅ 失败案例排序：待处置卡排在已自愈卡之前'); ok++;
+  } else errors.push(`失败案例排序异常（待处置卡 ${iOpenCard} / 已自愈卡 ${iAutoCard}）`);
 
   /* ---------- 关键整改点的可见性断言 ---------- */
   const checks = [
