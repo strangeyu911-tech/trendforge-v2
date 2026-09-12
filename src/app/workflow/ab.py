@@ -107,8 +107,19 @@ async def _metrics(session, content_id: str) -> dict:
 
 async def run_ab(market_code: str, template_name: str, v1_id: int, v2_id: int,
                  brief: dict | None = None, angle: str = "", topic: str = "",
-                 per_content: int = 300) -> dict:
-    """对两个 Prompt 版本各跑一次 produce 段并对比。返回 {v1, v2, delta}。"""
+                 per_content: int = 300, on_progress=None) -> dict:
+    """对两个 Prompt 版本各跑一次 produce 段并对比。返回 {v1, v2, delta}。
+
+    on_progress：可选的异步回调，用于把阶段进度回传给调用方（HTTP 层用它在 job 上打进度）。
+    A/B 本质是「两次完整 Produce 链路」，真机上单次数分钟，必须异步跑 + 轮询，不能挂在请求里同步等。
+    """
+    async def tick(msg: str) -> None:
+        if on_progress:
+            try:
+                await on_progress(msg)
+            except Exception:
+                pass  # 进度回传失败不该拖垮主链路
+
     async with SessionLocal() as session:
         v1 = await session.get(PromptRecord, v1_id)
         v2 = await session.get(PromptRecord, v2_id)
@@ -116,11 +127,14 @@ async def run_ab(market_code: str, template_name: str, v1_id: int, v2_id: int,
             raise ValueError("版本不存在")
         if not brief:
             brief = _default_brief(angle or topic, topic)
+        await tick(f"跑第 1 版（{v1.version}）：采集 → 写作 → 核查 → 复核")
         r1 = await _produce_once(session, market_code, brief, template_name,
                                  v1.content, v1.version, "v1")
+        await tick(f"跑第 2 版（{v2.version}）：采集 → 写作 → 核查 → 复核")
         r2 = await _produce_once(session, market_code, brief, template_name,
                                  v2.content, v2.version, "v2")
         # 仿真（校准参数来自 M1 真实信号；种子库无信号则走基线）
+        await tick("回收仿真反馈信号")
         await simulate_events(content_id=r1["content_id"], per_content=per_content)
         await simulate_events(content_id=r2["content_id"], per_content=per_content)
         m1 = await _metrics(session, r1["content_id"])
@@ -129,6 +143,7 @@ async def run_ab(market_code: str, template_name: str, v1_id: int, v2_id: int,
         async with SessionLocal() as s2:
             m1 = await _metrics(s2, r1["content_id"])
             m2 = await _metrics(s2, r2["content_id"])
+        await tick("汇总对比指标")
         delta = {
             "quality_avg": round(m2["quality_avg"] - m1["quality_avg"], 3),
             "ctr": round(m2["ctr"] - m1["ctr"], 3),
@@ -136,8 +151,8 @@ async def run_ab(market_code: str, template_name: str, v1_id: int, v2_id: int,
         }
         return {
             "template": template_name,
-            "v1": {**r1, **m1, "version": v1.version},
-            "v2": {**r2, **m2, "version": v2.version},
+            "v1": {**r1, **m1, "version": v1.version, "id": v1.id},
+            "v2": {**r2, **m2, "version": v2.version, "id": v2.id},
             "delta": delta,
             # 已知局限，主动标注而不是假装它是结论：CTR 由 quality 派生且叠加 ±20% 随机噪声，
             # 再用 CTR 反证 Prompt 对 quality 的改善属于循环论证。判优请以质量分/成本为准，
