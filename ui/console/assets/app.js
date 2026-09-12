@@ -320,6 +320,102 @@ const ReviseState = {
   },
 };
 
+/* ---------- 全局 A/B 任务状态 ----------
+   A/B 要跑两次完整 Produce 链路（真机数分钟），改成后台任务 + 轮询：
+   立即拿到 job_id，切页面/刷新都不丢进度，回来继续看。 */
+const AB_KEY = 'tf_active_ab';
+
+const ABState = {
+  job: null,      // {job_id, status, progress, error, result, meta, started_at}
+  timer: null,
+  miss: 0,
+
+  init() {
+    try { this.job = JSON.parse(localStorage.getItem(AB_KEY) || 'null'); } catch (e) { this.job = null; }
+    if (this.job && (this.job.status === 'running' || this.job.status === 'starting')) {
+      this.startPolling();
+      this.paint(true);
+    }
+  },
+
+  set(patch) {
+    this.job = Object.assign({}, this.job, patch, { updated_at: Date.now() });
+    try {
+      // 对比结果（含完整 quality/trace）只活在内存里，不落 localStorage：体量大且刷新后价值有限
+      const slim = Object.assign({}, this.job);
+      delete slim.result;
+      localStorage.setItem(AB_KEY, JSON.stringify(slim));
+    } catch (e) { }
+    this.paint();
+  },
+
+  clear() {
+    this.stopPolling();
+    this.job = null;
+    try { localStorage.removeItem(AB_KEY); } catch (e) { }
+    this.paint();
+  },
+
+  running() { return this.job && (this.job.status === 'running' || this.job.status === 'starting'); },
+
+  startPolling() {
+    if (this.timer) return;
+    this.miss = 0;
+    this.timer = setInterval(() => this.tick(), 5000);
+  },
+
+  stopPolling() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  },
+
+  async tick() {
+    if (!this.job || !this.job.job_id) { this.stopPolling(); return; }
+    let j;
+    try { j = await API.promptABJob(this.job.job_id); }
+    catch (e) {
+      // 404 = 实例重启丢了内存 job；其余多为网络抖动/冷启动，先保持轮询
+      if (++this.miss >= 3) { this.stopPolling(); this.set({ status: 'lost' }); }
+      return;
+    }
+    if (j.status === 'done') {
+      this.stopPolling();
+      this.set({ status: 'done', progress: '完成', result: j.result });
+      setTimeout(() => { if (this.job && this.job.status === 'done') this.clear(); }, 30000);
+    } else if (j.status === 'failed') {
+      this.stopPolling();
+      this.set({ status: 'failed', progress: '', error: j.error || '未知错误' });
+    } else {
+      this.miss = 0;
+      this.set({ status: 'running', progress: j.progress || this.job.progress || '执行中' });
+    }
+  },
+
+  paint(force) {
+    const box = document.getElementById('cl-ab-result');
+    if (!box) return;                       // 当前不在系统进化页
+    const j = this.job;
+    if (!j) { if (force) box.innerHTML = '选择两版 Prompt 并输入选题后运行'; return; }
+    if (j.status === 'running' || j.status === 'starting') {
+      const m = j.meta || {};
+      box.innerHTML = `<div class="revise-status">⏳ A/B 运行中 · 当前环节：<b>${esc(j.progress || '已排队')}</b>
+          <span class="job-elapsed">已运行 ${fmtElapsed(j.started_at)}</span>
+          <br><small style="color:#77809a">${esc(m.template || '')} · ${esc(m.market || '')} · 选题「${esc(m.angle || '')}」
+          —— 两版各跑一次完整链路，真机约数分钟。任务在服务端运行，切换页面或刷新浏览器都不会中断。</small></div>`;
+    } else if (j.status === 'done' && j.result) {
+      renderABResult(j.result, j.meta || {});
+    } else if (j.status === 'done') {
+      box.innerHTML = `<div class="revise-status done">✅ 上一次 A/B 已完成（详情未随刷新保留）。
+        生成的内容可在「内容」列表里按时间查看。</div>`;
+    } else if (j.status === 'failed') {
+      box.innerHTML = `<div class="revise-status failed">❌ A/B 运行失败：${esc(j.error || '')}
+          <br><small>可调整选题或换一对版本后重试。</small></div>`;
+    } else if (j.status === 'lost') {
+      box.innerHTML = `<div class="revise-status failed">⚠️ 任务状态失联（后端实例可能已重启，内存任务丢失）。
+          请重新运行 A/B。<br><small>注：已生成的内容会留在内容列表里。</small></div>`;
+    }
+  },
+};
+
 function currentView() { return (location.hash.slice(1) || 'overview').split('/')[0]; }
 
 function contentIdFromHash() { const h = location.hash.slice(1).split('/'); return h[0] === 'content' ? h[1] : null; }
@@ -1747,7 +1843,8 @@ async function closedLoopView() {
         <div id="cl-impact" class="loading">加载中…</div>
       </div>
       <div class="panel"><h3>④ A/B 对比（同一选题 · 两版 Prompt · 你来拍板）</h3>
-        <p class="muted" style="font-size:12px;margin-bottom:8px">⚠ A/B 会用两版 Prompt 各完整跑一次写作链路（真实 LLM 额度）。
+        <p class="muted" style="font-size:12px;margin-bottom:8px">⚠ A/B 会用两版 Prompt 各完整跑一次写作链路（真实 LLM 额度，真机约数分钟）。
+          <b>任务在后台运行</b>：提交后即可切走，回来还能看到进度与结果。
           <b>系统不替你判胜负</b>：仿真的 CTR 由质量分派生再用它反证质量属于循环论证，因此 CTR 只作灰色参考。
           请以质量分与成本为准，看完直接点「选用这版」。</p>
         <div class="toolbar">
@@ -1774,6 +1871,8 @@ async function closedLoopView() {
     loadSuggestions();
     loadVersions(tpls.templates[0]);
     loadAdoptionImpact();
+    loadAbVersions(tpls.templates[0]);   // A/B 下拉必须初始就填好，否则进来是空的、无从选起
+    paintAbPanel();                      // 刷新/切回来时，还原正在跑的 A/B 进度或结果
   } catch (e) { root.innerHTML = errBox(e); }
 }
 
@@ -1915,19 +2014,43 @@ async function loadVersions(tpl) {
 }
 
 async function loadAbVersions(tpl) {
+  const sel1 = document.getElementById('cl-ab-v1');
+  const sel2 = document.getElementById('cl-ab-v2');
+  const run = document.getElementById('cl-ab-run');
   try {
     const r = await API.promptVersions(tpl);
-    const vs = (r.versions || []).map(v =>
-      `<option value="${v.id}">${esc(lb(v.name))} · 第 ${esc(String(v.version).replace(/^v/, ''))} 版（${esc(sourceLabel(v.source))}）</option>`).join('');
-    document.getElementById('cl-ab-v1').innerHTML = '<option value="">旧版</option>' + vs;
-    document.getElementById('cl-ab-v2').innerHTML = '<option value="">新版</option>' + vs;
+    const vs = r.versions || [];
+    const opt = (v) => `<option value="${v.id}">${esc(lb(v.name))} · 第 ${esc(String(v.version).replace(/^v/, ''))} 版（${esc(sourceLabel(v.source))}${v.adopted ? ' · 当前生效' : ''}）</option>`;
+    const opts = vs.map(opt).join('');
+    sel1.innerHTML = '<option value="">旧版</option>' + opts;
+    sel2.innerHTML = '<option value="">新版</option>' + opts;
+    if (vs.length >= 2) {
+      // 列表是新版在前：预置「最旧的做旧版、最新的做新版」，进来就能直接跑
+      sel1.value = String(vs[vs.length - 1].id);
+      sel2.value = String(vs[0].id);
+      if (run) { run.disabled = false; run.title = ''; }
+    } else {
+      if (run) {
+        run.disabled = true;
+        run.title = '该模板目前只有 1 个 Prompt 版本，无法对比';
+      }
+      toast(`${esc(lb(tpl))} 目前只有 ${vs.length} 个版本，A/B 需要两版。先在 ① 运行反馈分析并采纳一条建议（或手动新建版本）`, 'err', 6000);
+    }
   } catch (e) {
     toast(`加载 A/B 版本失败：${esc(e.message)}`, 'err');
   }
 }
 
+/* A/B 面板：先渲染 unfinished 的 job（若有），否则回落空闲态文案 */
+function paintAbPanel() {
+  ABState.paint(true);
+  if (!ABState.job) {
+    const box = document.getElementById('cl-ab-result');
+    if (box) box.innerHTML = '选择两版 Prompt 并输入选题后运行';
+  }
+}
+
 async function runAB() {
-  const box = document.getElementById('cl-ab-result');
   const tpl = document.getElementById('cl-ab-tpl').value;
   const v1 = document.getElementById('cl-ab-v1').value;
   const v2 = document.getElementById('cl-ab-v2').value;
@@ -1936,28 +2059,42 @@ async function runAB() {
   if (!v1 || !v2) { toast('请为参与对比的两版各选一个 Prompt 版本', 'err'); return; }
   if (v1 === v2) { toast('两版选的是同一个版本，无法对比', 'err'); return; }
   if (!angle) { toast('请填写选题 / 角度', 'err'); return; }
-  if (!confirmCostly(`A/B 将用两版 Prompt 各跑一次完整写作链路（市场 ${market}）。`)) return;
-  box.innerHTML = 'A/B 运行中…（两版各跑一次真实写作 + 事实核查 + 总编复核，约数十秒）';
+  if (ABState.running()) { toast('已有 A/B 在跑，请等它出结果', 'err'); return; }
+  if (!confirmCostly(`A/B 将用两版 Prompt 各跑一次完整写作链路（市场 ${market}）。\n真机约数分钟，任务在后台运行，不用守着页面。`)) return;
+  ABState.set({ status: 'starting', job_id: null, progress: '已排队', result: null, error: null,
+    meta: { market, template: tpl, angle }, started_at: Date.now() });
   try {
     const r = await API.promptABRun({ market, template: tpl, v1_id: Number(v1), v2_id: Number(v2), angle });
-    const v1m = r.v1, v2m = r.v2, d = r.delta;
-    const deltaCls = (v) => v > 0 ? 'impact-up' : (v < 0 ? 'impact-down' : 'impact-flat');
-    const sign = (v) => `${v >= 0 ? '+' : ''}${v}`;
-    box.innerHTML = `
+    ABState.set({ status: 'running', job_id: r.job_id, progress: '已提交后台任务' });
+    ABState.startPolling();
+  } catch (e) {
+    ABState.set({ status: 'failed', error: e.message });
+  }
+}
+
+function renderABResult(r, meta) {
+  const box = document.getElementById('cl-ab-result');
+  if (!box) return;
+  const v1m = r.v1, v2m = r.v2, d = r.delta;
+  const deltaCls = (v) => v > 0 ? 'impact-up' : (v < 0 ? 'impact-down' : 'impact-flat');
+  const sign = (v) => `${v >= 0 ? '+' : ''}${v}`;
+  box.innerHTML = `
       <div class="impact-grid">
         <div class="impact-card">
           <h4>旧版 · 第 ${esc(String(v1m.version).replace(/^v/, ''))} 版</h4>
+          <div class="impact-row"><span>裁决</span>${verdictTag(v1m.verdict)}</div>
           <div class="impact-row"><span>质量分</span><b>${v1m.quality_avg}</b></div>
           <div class="impact-row"><span>成本</span><b>¥${v1m.cost_cny}</b></div>
           <div class="impact-row"><span>CTR（仿真·仅参考）</span><span class="muted">${v1m.ctr}</span></div>
-          <div style="margin-top:8px"><button class="btn" data-pick="${esc(v1)}">选用这版并生效</button></div>
+          <div style="margin-top:8px"><button class="btn" data-pick="${esc(String(v1m.id))}">选用这版并生效</button></div>
         </div>
         <div class="impact-card">
           <h4>新版 · 第 ${esc(String(v2m.version).replace(/^v/, ''))} 版</h4>
+          <div class="impact-row"><span>裁决</span>${verdictTag(v2m.verdict)}</div>
           <div class="impact-row"><span>质量分</span><b>${v2m.quality_avg}</b></div>
           <div class="impact-row"><span>成本</span><b>¥${v2m.cost_cny}</b></div>
           <div class="impact-row"><span>CTR（仿真·仅参考）</span><span class="muted">${v2m.ctr}</span></div>
-          <div style="margin-top:8px"><button class="btn" data-pick="${esc(v2)}">选用这版并生效</button></div>
+          <div style="margin-top:8px"><button class="btn" data-pick="${esc(String(v2m.id))}">选用这版并生效</button></div>
         </div>
         <div class="impact-card">
           <h4>差异（新版 − 旧版）</h4>
@@ -1972,24 +2109,25 @@ async function runAB() {
         ${esc(r.note || 'CTR/曝光为仿真口径，仅作参考。')} ·
         原文：<a class="link" href="#content/${v1m.content_id}">旧版全文</a> ·
         <a class="link" href="#content/${v2m.content_id}">新版全文</a>
+        ${meta && meta.angle ? ` · 选题「${esc(meta.angle)}」` : ''}
       </p>`;
-    box.querySelectorAll('[data-pick]').forEach(b => b.onclick = async () => {
-      try {
-        const res = await API.promptVersionAdopt(Number(b.dataset.pick));
-        if (res.ok) {
-          toast(`已选用「${esc(lb(res.name))}」第 ${esc(String(res.version).replace(/^v/, ''))} 版，即刻生效`, 'ok', 6000);
-          loadVersions(document.getElementById('cl-tpl').value);
-          loadAdoptionImpact();
-        } else toast(esc(res.error || '生效失败'), 'err');
-      } catch (e) { toast(`操作失败：${esc(e.message)}`, 'err'); }
-    });
-  } catch (e) { box.innerHTML = errBox(e); }
+  box.querySelectorAll('[data-pick]').forEach(b => b.onclick = async () => {
+    try {
+      const res = await API.promptVersionAdopt(Number(b.dataset.pick));
+      if (res.ok) {
+        toast(`已选用「${esc(lb(res.name))}」第 ${esc(String(res.version).replace(/^v/, ''))} 版，即刻生效`, 'ok', 6000);
+        loadVersions(document.getElementById('cl-tpl').value);
+        loadAdoptionImpact();
+      } else toast(esc(res.error || '生效失败'), 'err');
+    } catch (e) { toast(`操作失败：${esc(e.message)}`, 'err'); }
+  });
 }
 
 /* ---------- 启动 ---------- */
 (async () => {
   RunState.init();   // 先恢复未完成的供给任务（刷新浏览器也能续上轮询）
   ReviseState.init(); // 恢复进行中的内容重写状态
+  ABState.init();     // 恢复进行中的 A/B 对比任务
   route();
   try {
     const h = await API.health();

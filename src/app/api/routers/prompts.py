@@ -6,9 +6,11 @@ FeedbackAnalyst 产出结构化「迭代建议」（含完整新版 prompt）→
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
+from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -199,6 +201,11 @@ async def adoption_impact():
 
 
 # ---------- A/B ----------
+# 后台任务：与 revise 同构（内存字典 + 前端轮询）。
+# 已知取舍：免费实例重启会丢内存 job，届时轮询接口返回 404，前端提示「请重新运行」而不是假装还在跑。
+AB_JOBS: dict[str, dict] = {}
+
+
 class ABRequest(BaseModel):
     market: str = "US"
     template: str = "writer"
@@ -212,12 +219,63 @@ class ABRequest(BaseModel):
 
 @router.post("/prompts/ab/run")
 async def ab_run(req: ABRequest):
-    result = await run_ab(
-        market_code=req.market, template_name=req.template,
-        v1_id=req.v1_id, v2_id=req.v2_id,
-        brief=req.brief, angle=req.angle, topic=req.topic,
-        per_content=req.per_content)
-    return result
+    """发起 A/B：后台跑两次 Produce 链路，立即返回 job_id，前端轮询状态。
+
+    为什么必须异步：一次完整 Produce 链路在真机上要数分钟（含 revise rounds），A/B = 两次，
+    同步挂在一个 HTTP 请求里必然被网关/浏览器判定超时——这也是之前「点了半天没结果」的根因。
+    """
+    async with SessionLocal() as session:
+        v1 = await session.get(PromptRecord, req.v1_id)
+        v2 = await session.get(PromptRecord, req.v2_id)
+        if not v1 or not v2:
+            raise HTTPException(404, "Prompt 版本不存在（可能已被回滚或清理）")
+        if v1.id == v2.id:
+            raise HTTPException(400, "两版选的是同一个版本，无法对比")
+        if v1.name != req.template or v2.name != req.template:
+            raise HTTPException(400, f"所选版本不属于模板 {req.template}，请重新选择")
+
+    # 轻量 GC：只留最近 50 条，避免长期运行的实例上 job 表无界增长
+    if len(AB_JOBS) > 50:
+        for stale in sorted(AB_JOBS.items(), key=lambda kv: kv[1].get("started_at", ""))[:len(AB_JOBS) - 50]:
+            AB_JOBS.pop(stale[0], None)
+
+    job_id = str(uuid.uuid4())
+    AB_JOBS[job_id] = {
+        "status": "running", "progress": "已排队", "error": None, "result": None,
+        "started_at": datetime.utcnow().isoformat(),
+        "meta": {"market": req.market, "template": req.template,
+                 "v1_id": req.v1_id, "v2_id": req.v2_id, "angle": req.angle or req.topic},
+    }
+    asyncio.create_task(_ab_work(job_id, req))
+    return {"job_id": job_id, "status": "running"}
+
+
+async def _ab_work(job_id: str, req: "ABRequest") -> None:
+    """后台执行 A/B：跑两次链路 → 仿真 → 指标对比，结果挂在 job 上供轮询。"""
+    async def tick(msg: str) -> None:
+        if job_id in AB_JOBS:
+            AB_JOBS[job_id]["progress"] = msg
+
+    try:
+        result = await run_ab(
+            market_code=req.market, template_name=req.template,
+            v1_id=req.v1_id, v2_id=req.v2_id,
+            brief=req.brief, angle=req.angle, topic=req.topic,
+            per_content=req.per_content, on_progress=tick)
+        AB_JOBS[job_id] = {**AB_JOBS[job_id], "status": "done",
+                           "progress": "完成", "result": result}
+    except BaseException as e:  # 含 CancelledError：后台任务不受客户端断开影响
+        AB_JOBS[job_id] = {**AB_JOBS[job_id], "status": "failed",
+                           "progress": "失败", "error": str(e)[:300]}
+
+
+@router.get("/prompts/ab/jobs/{job_id}")
+async def ab_job(job_id: str):
+    """轮询 A/B 后台任务：running 带 stage 文案，done 带完整对比结果，failed 带原因。"""
+    job = AB_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "任务不存在（实例可能已重启，请重新运行 A/B）")
+    return {"job_id": job_id, **job}
 
 
 # ---------- 触发 FeedbackAnalyst（产出结构化建议） ----------

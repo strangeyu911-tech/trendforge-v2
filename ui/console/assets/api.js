@@ -71,6 +71,7 @@ const API = {
   promptSuggestionReject: (id) => req(`/prompts/suggestions/${id}/reject`, { method: 'POST' }),
   promptFeedback: (market) => req(`/prompts/feedback?market=${market}`, { method: 'POST' }),
   promptABRun: (body) => req('/prompts/ab/run', { method: 'POST', body: JSON.stringify(body) }),
+  promptABJob: (jobId) => req(`/prompts/ab/jobs/${encodeURIComponent(jobId)}`),
   promptAdoptionImpact: () => req('/prompts/adoption-impact'),
   // 人工校准（Evaluate 段人机闭环）
   calibrationSamples: () => req('/calibration/samples'),

@@ -83,8 +83,9 @@ global.fetch = async (u, o) => {
 const exposed = ['overview', 'pipeline', 'contents', 'markets', 'evalView', 'kbView',
   'analyticsView', 'calibrateView', 'closedLoopView', 'contentDetail',
   'loadAdoptionImpact', 'loadBadCases', 'loadTasks', 'loadSuggestions', 'loadVersions',
+  'loadAbVersions', 'renderABResult', 'paintAbPanel',
   'renderAnalytics', 'lb', 'lbEnum', 'stageLabel', 'kindLabel', 'sourceLabel', 'verdictTag',
-  'API', 'RunState', 'ReviseState'];
+  'API', 'RunState', 'ReviseState', 'ABState'];
 const factory = new Function(apiSrc + '\n' + appSrc + '\nreturn {' + exposed.join(',') + '};');
 let app;
 try {
@@ -166,6 +167,53 @@ async function render(name, fn) {
 
   els['badcases-panel'] = mkEl('badcases-panel');
   await render('badCases', () => app.loadBadCases());
+
+  /* ---------- A/B 面板（v2.20：改为后台任务 + 轮询，且初始就填好两个版本下拉） ---------- */
+  els['cl-ab-v1'] = mkEl('cl-ab-v1');
+  els['cl-ab-v2'] = mkEl('cl-ab-v2');
+  els['cl-ab-run'] = mkEl('cl-ab-run');
+  els['cl-ab-result'] = mkEl('cl-ab-result');
+  els['cl-ab-tpl'] = mkEl('cl-ab-tpl');
+  await render('abVersions', () => app.loadAbVersions('writer'));
+  const abV1 = String(els['cl-ab-v1'].value || '');
+  const abV2 = String(els['cl-ab-v2'].value || '');
+  if (abV1 && abV2 && abV1 !== abV2) {
+    console.log(`✅ A/B 下拉已预选：旧版 ${abV1} vs 新版 ${abV2}`);
+    ok++;
+  } else errors.push(`A/B 下拉未预选出两个不同版本（v1=${abV1}, v2=${abV2}）`);
+  if (/启用名单|只有/.test(els['cl-ab-run'].title || '') === false && els['cl-ab-run'].disabled === false) {
+    console.log('✅ A/B 运行按钮可用（该模板有多个版本）'); ok++;
+  } else errors.push('A/B 运行按钮被禁用（writer 应有 ≥2 个版本）');
+
+  // 结果卡渲染（用真实跑出来的结构形状回放一遍）
+  els['cl-ab-result'] = mkEl('cl-ab-result');
+  await render('abResult', () => app.renderABResult({
+    template: 'writer',
+    v1: { id: 11, content_id: 'cid1', version: 'v1', verdict: 'revise', quality_avg: 3.0, cost_cny: 0.41, ctr: 0.12 },
+    v2: { id: 16, content_id: 'cid2', version: 'v3', verdict: 'pass', quality_avg: 3.5, cost_cny: 0.34, ctr: 0.18 },
+    delta: { quality_avg: 0.5, ctr: 0.06, cost_cny: -0.07 },
+    note: '测试 note',
+  }, { angle: 'AI 监管', market: 'US', template: 'writer' }));
+  const abHtml = els['cl-ab-result'].innerHTML || '';
+  const abChecks = [
+    ['差异（新版 − 旧版）', '差异卡'], ['data-pick="11"', '旧版选用按钮带版本 id'],
+    ['data-pick="16"', '新版选用按钮带版本 id'], ['不作判据', 'CTR 不作判据说明'],
+    ['#content/cid1', '旧版全文链接'], ['#content/cid2', '新版全文链接'],
+  ];
+  for (const [needle, label] of abChecks) {
+    if (abHtml.includes(needle)) { console.log(`✅ A/B 结果卡：${label}`); ok++; }
+    else errors.push(`A/B 结果卡缺少「${needle}」（${label}）`);
+  }
+
+  // 后台任务态：进度必须渲染出来（不再是「运行中…」死等一个同步请求）
+  els['cl-ab-result'] = mkEl('cl-ab-result');
+  Object.assign(app.ABState, { job: { job_id: 'j1', status: 'running', progress: '跑第 2 版（v3）', started_at: Date.now() - 65000, meta: { template: 'writer', market: 'US', angle: 'AI 监管' } } });
+  await render('abRunning', () => app.ABState.paint(true));
+  const runHtml = els['cl-ab-result'].innerHTML || '';
+  if (/A\/B 运行中/.test(runHtml) && /跑第 2 版/.test(runHtml) && /已运行 1m05s/.test(runHtml)) {
+    console.log('✅ A/B 后台进度卡渲染（含环节 + 已运行时长）'); ok++;
+  } else errors.push(`A/B 进度卡渲染异常：${runHtml.slice(0, 160)}`);
+  app.ABState.job = null;
 
   /* ---------- 关键整改点的可见性断言 ---------- */
   const checks = [
