@@ -552,8 +552,9 @@ async function pipeline() {
     <div class="panel" id="tasks-panel"><h3>运行历史</h3><div class="loading">加载中…</div></div>
     <div class="panel"><h3>失败案例库</h3>
       <p class="muted" style="font-size:12px;margin-bottom:8px">
-        每次被总编驳回或运行失败都会自动落一条案例，记录根因与已采取的修复动作——
-        「已自愈」的那几条是在没有人工介入的情况下自动换题重试成功的。</p>
+        每次被总编驳回都会落一条案例，走「归因 → 处置 → 验证」：自动换题重试成功的标「已自愈」，
+        并记下产出的替代稿；没有人工介入的留在「待人工处置」，卡片上可直接重跑或归档。
+        重跑是真跑一次链路，结果会回写案例状态（成功转已自愈，失败退回待处置并换成本次真实根因）。</p>
       <div id="badcases-panel" class="loading">加载中…</div></div>`;
   loadTasks();
   loadBadCases();
@@ -657,7 +658,67 @@ async function loadTasks() {
   } catch (e) { panel.innerHTML = errBox(e); }
 }
 
-/* 失败案例库：bad_cases 表一直有数据但前端零入口（产品设计里的失败案例库没做 UI） */
+/* ---------- 失败案例库：状态驱动的卡片 + 处置入口（归档 / 重跑） ----------
+   设计要点：卡片按「状态」决定显示哪些字段，而不是按固定字段排版后把空值摊给读者。
+   待人工处置的案例本来就没有"修复动作"（还没修），此时该显示的是「下一步」+「已挂多久」，
+   空位随之消失——否则一个缺字段会读成界面没渲染完。
+   机器码（open/auto_recovered/editor_reject…）一律不直出：状态与失败类型都用后端给的中文标签。 */
+
+const BADCASE_RERUN_KEY = 'tf_active_badcase_rerun';
+const BAD_STATUS_TAG = { open: 'red', retrying: 'orange', auto_recovered: 'green', archived: 'gray' };
+
+/* 重跑是后台任务：与供给/重写/A-B 同一范式（POST 拿 job_id → 5s 轮询），
+   刷新浏览器也能续上。完成后重新拉列表，状态由后端按真实结果回写。 */
+const BadCaseRerun = {
+  jobs: {},      // caseId -> {job_id, market, status, progress, started_at}
+  timer: null,
+  miss: {},
+
+  init() {
+    try { this.jobs = JSON.parse(localStorage.getItem(BADCASE_RERUN_KEY) || '{}'); } catch (e) { this.jobs = {}; }
+    const live = {};
+    for (const [k, v] of Object.entries(this.jobs || {})) {
+      if (v && (v.status === 'running' || v.status === 'starting')) live[k] = v;
+    }
+    this.jobs = live;
+    if (Object.keys(this.jobs).length) this.startPolling();
+  },
+
+  save() { try { localStorage.setItem(BADCASE_RERUN_KEY, JSON.stringify(this.jobs)); } catch (e) { } },
+
+  start(caseId, jobId, market) {
+    this.jobs[caseId] = { job_id: jobId, market, status: 'running', started_at: Date.now() };
+    this.save(); this.startPolling(); this.refresh();
+  },
+
+  startPolling() { if (this.timer) return; this.timer = setInterval(() => this.tick(), 5000); },
+  stopPolling() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+
+  async tick() {
+    const ids = Object.keys(this.jobs);
+    if (!ids.length) { this.stopPolling(); return; }
+    for (const id of ids) {
+      const st = this.jobs[id];
+      if (st.status !== 'running' && st.status !== 'starting') continue;
+      let j;
+      try { j = await API.job(st.job_id); } catch (e) { continue; }   // 网络抖动：保持轮询
+      if (j.status === 'unknown') {
+        this.miss[id] = (this.miss[id] || 0) + 1;
+        if (this.miss[id] >= 3) this.jobs[id] = { ...st, status: 'lost' };
+      } else if (j.status === 'running') {
+        this.miss[id] = 0;
+        this.jobs[id] = { ...st, status: 'running', progress: j.progress || '' };
+      } else {
+        this.jobs[id] = { ...st, status: j.status, error: j.error || '' };
+      }
+    }
+    this.save(); this.refresh();
+    if (!Object.values(this.jobs).some(v => v.status === 'running' || v.status === 'starting')) this.stopPolling();
+  },
+
+  refresh() { if (currentView() === 'pipeline') loadBadCases(); },
+};
+
 async function loadBadCases() {
   const box = document.getElementById('badcases-panel');
   if (!box) return;
@@ -665,18 +726,99 @@ async function loadBadCases() {
     const r = await API.badCases();
     const rows = r.bad_cases || [];
     if (!rows.length) { box.innerHTML = '<span style="color:#77809a;font-size:12px">暂无失败案例</span>'; return; }
-    box.innerHTML = rows.map(b => {
-      const healed = b.status === 'auto_recovered';
-      return `<div class="finding" style="background:${healed ? '#f6f8fc' : '#fff6f6'};border-left:3px solid ${healed ? '#9aa3b8' : '#d43d3d'}">
-        <span class="tag ${healed ? 'gray' : 'red'}">${healed ? '已自愈' : '待处理'}</span>
-        <span class="tag gray">${esc(b.category || '')}</span>
-        <span class="tag gray">${fmtTime(b.created_at)}</span>
-        <div style="margin:6px 0 3px"><b>${esc(b.title || '（无标题）')}</b></div>
-        <div style="font-size:12px;color:#55607a">根因：${esc(b.root_cause || '—')}</div>
-        ${b.fix_action ? `<div style="font-size:12px;color:#0d9268">修复动作：${esc(b.fix_action)}</div>` : ''}
-      </div>`;
-    }).join('');
+    const order = { open: 0, retrying: 1, auto_recovered: 2, archived: 3 };
+    const sorted = [...rows].sort((a, b) =>
+      ((order[a.status] ?? 9) - (order[b.status] ?? 9))
+      || String(b.created_at).localeCompare(String(a.created_at)));
+    const s = r.summary || {};
+    const groups = (r.groups || []).map(g =>
+      `<span class="tag gray">${esc(g.label)} ${g.count}${g.pending ? ` · 待处置 ${g.pending}` : ''}</span>`).join(' ');
+    box.innerHTML = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <span class="tag gray">共 ${s.total || 0} 条</span>
+        ${s.pending ? `<span class="tag red">待处置 ${s.pending}</span>` : ''}
+        ${s.recovered ? `<span class="tag green">已自愈 ${s.recovered}</span>` : ''}
+        ${s.archived ? `<span class="tag gray">已归档 ${s.archived}</span>` : ''}
+        ${groups}
+      </div>
+      ${sorted.map(badCaseCard).join('')}`;
+    box.querySelectorAll('[data-bc-archive]').forEach(el => {
+      el.onclick = () => archiveBadCase(Number(el.dataset.bcArchive));
+    });
+    box.querySelectorAll('[data-bc-rerun]').forEach(el => {
+      el.onclick = () => rerunBadCase(Number(el.dataset.bcRerun), el.dataset.bcMarket || '');
+    });
   } catch (e) { box.innerHTML = errBox(e); }
+}
+
+function badCaseCard(b) {
+  const st = b.status;
+  const live = BadCaseRerun.jobs[b.id];
+  const running = st === 'retrying' || !!(live && (live.status === 'running' || live.status === 'starting'));
+  const tone = st === 'auto_recovered' ? ['#f6f8fc', '#9aa3b8']
+    : st === 'archived' ? ['#fafaf7', '#b4b2a9']
+      : st === 'retrying' ? ['#fffaf0', '#ef9f27']
+        : ['#fff6f6', '#d43d3d'];
+  const tags = [
+    `<span class="tag ${BAD_STATUS_TAG[st] || 'gray'}">${esc(b.status_label || st)}</span>`,
+    b.failure_kind_label ? `<span class="tag gray">${esc(b.failure_kind_label)}</span>` : '',
+    b.market ? `<span class="tag gray">${esc(b.market)}</span>` : '',
+    (st === 'open' || st === 'retrying') ? `<span class="tag gray">已挂 ${b.age_days} 天</span>` : '',
+  ].filter(Boolean).join(' ');
+
+  let body = '';
+  if (st === 'auto_recovered') {
+    body = b.fix_action
+      ? `<div style="font-size:12px;color:#0d9268">自动处置：${esc(b.fix_action)}`
+        + (b.content_id ? ` · <a class="link" href="#content/${esc(b.content_id)}">查看替代稿 ↗</a>` : '')
+        + '</div>'
+      : '';
+  } else if (st === 'archived') {
+    body = `<div style="font-size:12px;color:#5f5e5a">已人工归档，不再跟进`
+      + (b.resolved_at ? `（${esc(fmtTime(b.resolved_at))}）` : '') + '</div>';
+  } else if (running) {
+    const prog = live && live.progress ? ` · 当前环节：${esc(lb(live.progress))}` : '';
+    body = `<div style="font-size:12px;color:#854f0b">正在按 ${esc(b.market || '该')} 市场重跑完整链路`
+      + `${prog}…（任务在服务端跑，可离开本页）</div>`;
+  } else {
+    body = '<div style="font-size:12px;color:#a32d2d">下一步：重跑一次该市场链路；'
+      + '若仍未通过则归档或调整选题策略</div>';
+  }
+
+  const actions = (st === 'open' && !running)
+    ? `<div style="margin-top:8px;display:flex;gap:8px">
+         <button class="btn ghost" data-bc-rerun="${b.id}" data-bc-market="${esc(b.market || '')}">重跑</button>
+         <button class="btn ghost" data-bc-archive="${b.id}">归档</button>
+       </div>`
+    : '';
+
+  return `<div class="finding" style="background:${tone[0]};border-left:3px solid ${tone[1]}">
+      ${tags}
+      <div style="margin:6px 0 3px"><b>${esc(b.title || '（无标题）')}</b></div>
+      ${b.root_cause ? `<div style="font-size:12px;color:#55607a">根因：${esc(b.root_cause)}</div>` : ''}
+      ${body}${actions}
+    </div>`;
+}
+
+async function archiveBadCase(id) {
+  if (!window.confirm('归档后该案例不再跟进（仍可在案例库中追溯）。确认归档？')) return;
+  try { await API.badCaseArchive(id); toast('已归档'); loadBadCases(); }
+  catch (e) { toast(`归档失败：${e.message}`, 'err'); }
+}
+
+async function rerunBadCase(id, market) {
+  let mk = market;
+  if (!mk) {
+    mk = (window.prompt('该案例未记录所属市场，请输入要重跑的 market 代码（如 US）：') || '').trim();
+    if (!mk) return;
+  }
+  if (!confirmCostly(`将按 ${mk} 市场完整重跑一次链路，完成后自动回写该案例的处置结果。`)) return;
+  try {
+    const r = await API.badCaseRerun(id, mk);
+    if (r.ok === false) { toast(r.error || '无法重跑', 'err'); return; }
+    toast('已发起重跑，可在卡片上看到进度');
+    BadCaseRerun.start(id, r.job_id, r.market);
+  } catch (e) { toast(`重跑失败：${e.message}`, 'err'); }
 }
 
 /* ---------- 内容列表：市场/裁决筛选 + 标题搜索 + 计数 ---------- */
@@ -2128,6 +2270,7 @@ function renderABResult(r, meta) {
   RunState.init();   // 先恢复未完成的供给任务（刷新浏览器也能续上轮询）
   ReviseState.init(); // 恢复进行中的内容重写状态
   ABState.init();     // 恢复进行中的 A/B 对比任务
+  BadCaseRerun.init(); // 恢复进行中的失败案例重跑
   route();
   try {
     const h = await API.health();

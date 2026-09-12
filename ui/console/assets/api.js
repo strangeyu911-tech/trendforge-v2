@@ -60,6 +60,10 @@ const API = {
   kbReject: (id) => req(`/kb/patches/${id}/reject`, { method: 'POST' }),
   prompts: () => req('/prompts'),
   badCases: () => req('/bad-cases'),
+  badCaseArchive: (id) => req(`/bad-cases/${id}/archive`, { method: 'POST' }),
+  badCaseRerun: (id, market = '') => req(
+    `/bad-cases/${id}/rerun${market ? '?market=' + encodeURIComponent(market) : ''}`,
+    { method: 'POST' }),
   // M3 闭环
   promptTemplates: () => req('/prompts/templates'),
   promptVersions: (template = '') => req(`/prompts/versions${template ? '?template=' + encodeURIComponent(template) : ''}`),
