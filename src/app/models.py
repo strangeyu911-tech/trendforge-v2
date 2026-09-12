@@ -179,6 +179,12 @@ class EvalReport(Base):
 
 
 class BadCase(Base):
+    """失败案例库：一次失败尝试 → 归因 → 处置 → 验证。
+
+    状态机 status：open（待人工处置）→ retrying（重跑中）→ auto_recovered（已自愈）/
+    archived（人工归档结案）。历史遗留记录可能停在 open 且无 fix_action —— 那是尚未闭环，
+    不是字段缺失，UI 按状态决定显示哪些字段而不是把空值摊给读者看。
+    """
     __tablename__ = "bad_cases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -188,6 +194,13 @@ class BadCase(Base):
     root_cause: Mapped[str] = mapped_column(Text, default="")
     fix_action: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(16), default="open")
+    # 失败类型机器码（no_evidence / editor_reject / topic_drift / run_error）：
+    # 供按类型聚合与筛选；展示一律经 labels_cn，不要把机器码摊给读者
+    failure_kind: Mapped[str] = mapped_column(String(24), default="")
+    # 所属市场：重跑要按市场跑链路，聚合也按市场看
+    market: Mapped[str] = mapped_column(String(8), default="")
+    # 处置完成时间（自愈或人工归档时才写）；未闭环为空 → UI 据此算「已挂 N 天」
+    resolved_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
@@ -288,6 +301,25 @@ async def migrate_db() -> None:
             "proposed_change TEXT, rationale TEXT, expected_metric VARCHAR(64), new_prompt TEXT, "
             "source VARCHAR(24) DEFAULT 'ai_generated', status VARCHAR(16) DEFAULT 'pending', "
             "market VARCHAR(8), created_at TIMESTAMP)"))
+
+        # bad_cases：状态机扩展列（failure_kind / market / resolved_at），旧快照库补列
+        res = await conn.execute(text("PRAGMA table_info(bad_cases)"))
+        bcols = {row[1] for row in res}
+        b_alters = [
+            ("failure_kind", "ALTER TABLE bad_cases ADD COLUMN failure_kind VARCHAR(24) DEFAULT ''"),
+            ("market", "ALTER TABLE bad_cases ADD COLUMN market VARCHAR(8) DEFAULT ''"),
+            ("resolved_at", "ALTER TABLE bad_cases ADD COLUMN resolved_at TIMESTAMP"),
+        ]
+        for col, ddl in b_alters:
+            if col not in bcols:
+                await conn.execute(text(ddl))
+        await conn.execute(text(
+            "UPDATE bad_cases SET failure_kind = 'editor_reject' "
+            "WHERE failure_kind IS NULL OR failure_kind = ''"))
+        # 已闭环的旧记录补处置时间（拿不到真实处置时刻，用记录创建时间占位并保持口径一致）
+        await conn.execute(text(
+            "UPDATE bad_cases SET resolved_at = created_at "
+            "WHERE resolved_at IS NULL AND status IN ('auto_recovered', 'archived')"))
 
 
 async def init_db() -> None:
