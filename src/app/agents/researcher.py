@@ -35,7 +35,7 @@ class ResearcherAgent(BaseAgent):
         sources = {e["source"] for e in evidences}
         return {
             "evidences": evidences, "queries": queries, "evidence_guard": guard,
-            "_decision": {"reason": f"改写 {len(queries)} 个 query，{guard['candidates']} 条候选经"
+            "_decision": {"reason": f"改写 {len(queries)} 个检索词，{guard['candidates']} 条候选经"
                                    f"相关性/类目/主干三级过滤留 {len(evidences)} 条，"
                                    f"主干 {guard['main_chunks']} 块 + 背景 {guard['background_docs']} 篇，"
                                    f"覆盖 {len(sources)} 个来源",

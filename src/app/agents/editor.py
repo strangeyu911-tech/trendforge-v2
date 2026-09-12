@@ -5,6 +5,7 @@ import json
 
 from app.agents.base import AgentError, BaseAgent, RunContext, clean_ev
 from app.config import COMPLIANCE_BLOCKLIST
+from app.labels_cn import verdict_cn
 from app.llm import extract_json
 from app.prompts.manager import get_pm
 
@@ -55,7 +56,7 @@ class EditorAgent(BaseAgent):
         }
         return {
             "review": review, "_llm_resp": resp,
-            "_decision": {"reason": f"裁决 {verdict}：综合 {avg}/5"
+            "_decision": {"reason": f"裁决「{verdict_cn(verdict)}」：综合 {avg}/5"
                                    + (f"，合规命中 {len(hits)} 项" if hits else "")
                                    + (f"，修改意见：{review['revision_advice'][:40]}" if verdict == "revise" else ""),
                           "details": review},
@@ -78,7 +79,7 @@ class EditorAgent(BaseAgent):
             review["avg"] = 2.0
         return {"review": review,
                 "_decision": {"reason": f"兜底审核：合规扫描 {len(hits)} 命中，"
-                                       f"事实置信 {conf}，裁决 {review['verdict']}"}}
+                                       f"事实置信 {conf}，裁决「{verdict_cn(review['verdict'])}」"}}
 
 
 def _clamp(v) -> float:

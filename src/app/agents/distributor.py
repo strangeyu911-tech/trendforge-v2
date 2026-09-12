@@ -15,6 +15,7 @@ import json
 import time
 
 from app.agents.base import AgentError, BaseAgent, RunContext, clean_ev
+from app.labels_cn import format_cn, platform_cn
 from app.agents.tools import (
     TOOL_SCHEMAS,
     execute_tool_call,
@@ -124,7 +125,8 @@ class DistributorAgent(BaseAgent):
             "_tool_calls": tool_calls,
             "_decision": {
                 "reason": f"调用 {len(tool_calls)} 个真实工具（本地时间/平台高峰）后，"
-                          f"制定 {len(norm)} 条分发计划，主发 {norm[0]['platform']}（{norm[0]['format']}）",
+                          f"制定 {len(norm)} 条分发计划，主发 {platform_cn(norm[0]['platform'])}"
+                          f"（{format_cn(norm[0]['format'])}）",
                 "details": {"primary": norm[0], "tool_calls": tool_calls},
             },
         }

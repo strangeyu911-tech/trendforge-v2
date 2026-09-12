@@ -162,10 +162,10 @@ async def _revise_work(job_id: str, content_id: str) -> None:
                 "review": {k: v for k, v in quality.items() if k != "fact_check"},
             }
             # 重跑 Produce 段子链：Writer 按修改意见重写 → FactChecker → Editor
-            REVISE_JOBS[job_id]["progress"] = "重写母稿（Writer → 事实核查 → 总编复核）"
+            REVISE_JOBS[job_id]["progress"] = "重写母稿（写作 → 事实核查 → 总编审核）"
             data, rounds = await run_revise_rounds(ctx, data)
             # 刷新多形态（正文已变，派生需同步；不重跑 Distributor，分发计划属策略层）
-            REVISE_JOBS[job_id]["progress"] = "刷新多形态（FormatAdapter）"
+            REVISE_JOBS[job_id]["progress"] = "刷新多形态（形态适配）"
             data.update(await FormatAdapterAgent()._exec(ctx, data))
 
             c.title = data["article"]["title"]

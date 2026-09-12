@@ -18,13 +18,8 @@ from app.services.prompt_versions import current_template_content
 _SUGGESTABLE_TEMPLATES = ["writer", "editor", "distributor", "angle_editor"]
 
 # 模板代号 → 运营可读中文名（避免 [writer/结构要求] 这类内部标识出现在读者可见文案）
-TEMPLATE_CN = {
-    "writer": "写作", "editor": "总编审核", "distributor": "分发策略",
-    "angle_editor": "角度设计", "signal_scout": "信号捕捉", "trend_analyst": "趋势研判",
-    "audience_insight": "受众洞察", "researcher": "证据检索", "format_adapter": "形态适配",
-    "fact_checker": "事实核查", "topic_guard": "选题守卫", "kb_curator": "知识库治理",
-    "feedback_analyst": "反馈分析", "zh_mirror": "中文对照",
-}
+# 口径已统一收敛到 app.labels_cn.AGENT_CN（全站唯一一份），此处保留别名以兼容既有引用。
+from app.labels_cn import AGENT_CN as TEMPLATE_CN
 
 
 def readable_suggestions(structured: list[dict], raw_sugs: list) -> list[str]:

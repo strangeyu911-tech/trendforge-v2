@@ -8,6 +8,7 @@ import json
 
 from app.agents.base import AgentError, BaseAgent, RunContext, clean_ev
 from app.config import settings
+from app.labels_cn import formats_cn
 from app.llm import extract_json
 from app.prompts.manager import get_pm
 
@@ -46,7 +47,7 @@ class FormatAdapterAgent(BaseAgent):
         formats = {k: v for k, v in formats.items() if k in FORMAT_LABELS}
         return {
             "formats": formats, "_llm_resp": resp,
-            "_decision": {"reason": f"派生 {len(formats)} 种形态：{'、'.join(formats.keys())}",
+            "_decision": {"reason": f"派生 {len(formats)} 种形态：{formats_cn(formats.keys())}",
                           "details": {"format_list": list(formats.keys())}},
         }
 
