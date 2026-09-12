@@ -51,7 +51,7 @@
   <h1>TrendForge V2<br>AI Native 全球化内容供给引擎</h1>
   <p class="sub">
     把内容供给的关键流程交给 AI：信号捕捉、趋势研判、受众洞察、角度设计、证据检索、
-    写作、选题守卫、事实核查、总编审核、形态适配、分发策略——人负责定义标准（市场档案 / Prompt / 评估 Rubric），
+    写作、选题守卫、事实核查、总编审核、形态适配、分发策略——人负责定义标准（市场档案 / 提示词 / 评估标准），
     AI 在真实消费反馈中持续进化。
   </p>
   <div class="flow">
@@ -67,7 +67,7 @@
   </div>
 
   <div class="section">
-    <h2>3 分钟看懂这个 Demo（按顺序点）</h2>
+    <h2>3 分钟看懂这个演示（按顺序点）</h2>
     <p class="hint">控制台有 9 个模块，第一次打开容易不知道从哪看起。这条路径覆盖了最能说明问题的五站。</p>
     <div class="tour">
       <a href="/console/#pipeline">
@@ -76,7 +76,7 @@
           <em>重点：</em>任务在服务端运行，切页面或刷新都不会中断。</span></a>
       <a href="/console/#contents">
         <b>② 打开一条内容</b>
-        <span>母稿 + 多形态派生 + 分发计划 + 可点击溯源的真实信号 + 每一步的执行 Trace。
+        <span>母稿 + 多形态派生 + 分发计划 + 可点击溯源的真实信号 + 每一步的执行轨迹。
           <em>重点：</em>非中文内容默认「原文 + 中文对照」。</span></a>
       <a href="/console/#analytics">
         <b>③ 分析中心</b>
@@ -84,7 +84,7 @@
           <em>重点：</em>每张图下方可展开驱动它的真实 SQL；仿真数据的图都带「仿真」角标。</span></a>
       <a href="/console/#calibrate">
         <b>④ 人工校准</b>
-        <span>五维半分制打分 + 逐维理由，与 EditorAgent 的评委分做 Spearman 对齐。
+        <span>五维半分制打分 + 逐维理由，与机器评委分做 Spearman 对齐。
           <em>重点：</em>机器裁决和真人打分的差值，正是这个模块存在的理由。</span></a>
       <a href="/console/#closedloop">
         <b>⑤ 系统进化</b>
@@ -96,27 +96,27 @@
   <div class="section">
     <h2>14 个 Agent：主管线 11 + 治理/分析 3</h2>
     <p class="hint">
-      「跑供给」页的进度条就是下面第一条流水线（含 TopicGuard 选题守卫）；另外 3 个不在主管线里，
+      「跑供给」页的进度条就是下面第一条流水线（含选题守卫）；另外 3 个不在主管线里，
       分别负责知识库治理、反馈分析和中文对照。控制台里的中文名与此表完全一致。
     </p>
     <div class="agent-groups">
       <div class="agent-group">
         <h3>主管线（拓扑固定 · 行为可配）</h3>
         <ol class="agents">
-          <li>SignalScout 信号捕捉</li><li>TrendAnalyst 趋势研判</li>
-          <li>AudienceInsight 受众洞察</li><li>AngleEditor 角度设计</li>
-          <li>Researcher 证据检索</li><li>Writer 写作</li>
-          <li>TopicGuard 选题守卫</li><li>FactChecker 事实核查</li>
-          <li>Editor 总编审核</li><li>FormatAdapter 形态适配</li>
-          <li>Distributor 分发策略</li>
+          <li>信号捕捉</li><li>趋势研判</li>
+          <li>受众洞察</li><li>角度设计</li>
+          <li>证据检索</li><li>写作</li>
+          <li>选题守卫</li><li>事实核查</li>
+          <li>总编审核</li><li>形态适配</li>
+          <li>分发策略</li>
         </ol>
       </div>
       <div class="agent-group">
         <h3>治理 / 分析链路</h3>
         <ol class="agents">
-          <li>FeedbackAnalyst 反馈分析</li>
-          <li>KBCurator 知识库治理</li>
-          <li>ZhMirror 中文对照</li>
+          <li>反馈分析</li>
+          <li>知识库治理</li>
+          <li>中文对照</li>
         </ol>
       </div>
     </div>
@@ -139,8 +139,8 @@
 
   <footer>
     TrendForge V2 · 个人作品集项目 · FastAPI + SQLite + BM25 RAG + DeepSeek<br>
-    诚实标注：Demo 中的消费数据（CTR/完读率等）为仿真口径，知识库为教学用合成语料——
-    页面上凡涉及这两类数据，均在所在区块自带「仿真 / 合成 KB」角标。
+    诚实标注：演示站中的消费数据（CTR/完读率等）为仿真口径，知识库为教学用合成语料——
+    页面上凡涉及这两类数据，均在所在区块自带「仿真 / 合成知识库」角标。
   </footer>
 </div>
 <script>

@@ -16,7 +16,7 @@ async function req(path, opts = {}) {
   if (apiToken) headers['X-API-Token'] = apiToken;
   const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
   if (resp.status === 401) {
-    const input = prompt('后端已启用写接口鉴权（TF_API_TOKEN），请输入 API Token：');
+    const input = prompt('后端已启用写接口鉴权（TF_API_TOKEN），请输入 API 访问令牌：');
     if (input) {
       apiToken = input.trim();
       localStorage.setItem('tf_api_token', apiToken);
@@ -25,7 +25,7 @@ async function req(path, opts = {}) {
       if (retry.ok) return retry.json();
       throw new Error(`鉴权失败（HTTP ${retry.status}）`);
     }
-    throw new Error('需要 API Token（写操作被拒绝）');
+    throw new Error('需要 API 访问令牌（写操作被拒绝）');
   }
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();

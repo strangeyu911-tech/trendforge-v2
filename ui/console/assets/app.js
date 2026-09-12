@@ -44,10 +44,10 @@ function statusTag(s) {
 
 /* ---------- 主管线 Agent 链（口径：主管线 11 个，加治理/分析链路共 14 个） ---------- */
 const AGENT_CHAIN = [
-  ['signal_scout', '信号侦察'], ['trend_analyst', '趋势分析'], ['audience_insight', '受众洞察'],
-  ['angle_editor', '选题编辑'], ['researcher', '证据检索'], ['writer', '写作'],
-  ['topic_guard', '主题闸门'], ['fact_checker', '事实核查'], ['editor', '总编复核'],
-  ['format_adapter', '多形态派生'], ['distributor', '分发计划'],
+  ['signal_scout', '信号捕捉'], ['trend_analyst', '趋势研判'], ['audience_insight', '受众洞察'],
+  ['angle_editor', '角度设计'], ['researcher', '证据检索'], ['writer', '写作'],
+  ['topic_guard', '选题守卫'], ['fact_checker', '事实核查'], ['editor', '总编审核'],
+  ['format_adapter', '形态适配'], ['distributor', '分发策略'],
 ];
 const AGENT_LABEL = Object.fromEntries(AGENT_CHAIN);
 
@@ -154,11 +154,11 @@ const RunState = {
       box.innerHTML = '发起中…';
     } else if (j.status === 'running') {
       const cur = j.progress || '';
-      const steps = AGENT_CHAIN.map(([k, label]) => {
+      const steps = AGENT_CHAIN.map(([k, label], i) => {
         const state = cur === k ? ' now' : '';
-        return `<span class="ag-step${state}" title="${esc(k)}">${esc(label)}</span>`;
+        return `<span class="ag-step${state}" title="第 ${i + 1} 步 · ${esc(label)}">${esc(label)}</span>`;
       }).join('<i class="ag-arrow">→</i>');
-      box.innerHTML = `⏳ 流水线运行中 · <b>${esc(j.market || '')}</b>${j.job_id ? ` · job ${esc(j.job_id.slice(0, 8))}` : ''}
+      box.innerHTML = `⏳ 流水线运行中 · <b>${esc(j.market || '')}</b>${j.job_id ? ` · 任务编号 ${esc(j.job_id.slice(0, 8))}` : ''}
         <span class="job-elapsed">已运行 ${fmtElapsed(j.started_at)}</span>
         <div class="ag-chain">${steps}</div>
         <div class="toolbar" style="margin-top:8px"><button class="btn ghost" id="job-cancel">取消任务</button></div>
@@ -166,7 +166,7 @@ const RunState = {
     } else if (j.status === 'cached') {
       box.innerHTML = `${close}✅ 命中缓存（秒开，零额度消耗）→ <a class="link" href="#content/${esc(j.content_id)}">查看内容</a>`;
     } else if (j.status === 'done') {
-      box.innerHTML = `${close}✅ 供给完成（耗时 ${fmtElapsed(j.started_at, j.updated_at)}）→ <a class="link" href="#content/${esc(j.content_id)}">查看内容与 Trace</a>`;
+      box.innerHTML = `${close}✅ 供给完成（耗时 ${fmtElapsed(j.started_at, j.updated_at)}）→ <a class="link" href="#content/${esc(j.content_id)}">查看内容与执行轨迹</a>`;
     } else if (j.status === 'cancelled') {
       box.innerHTML = `${close}⏹ 已取消（${esc(j.error || '用户取消')}）。若流水线随后完成，产物仍会出现在「内容」页。`;
     } else if (j.status === 'failed') {
@@ -394,7 +394,7 @@ const ABState = {
     const box = document.getElementById('cl-ab-result');
     if (!box) return;                       // 当前不在系统进化页
     const j = this.job;
-    if (!j) { if (force) box.innerHTML = '选择两版 Prompt 并输入选题后运行'; return; }
+    if (!j) { if (force) box.innerHTML = '选择两版提示词并输入选题后运行'; return; }
     if (j.status === 'running' || j.status === 'starting') {
       const m = j.meta || {};
       box.innerHTML = `<div class="revise-status">⏳ A/B 运行中 · 当前环节：<b>${esc(j.progress || '已排队')}</b>
@@ -466,7 +466,7 @@ async function overview() {
     const pendingPatches = (patches.patches || []).filter(p => p.status === 'pending').length;
     const latestAt = contents.length ? contents[0].created_at : '';
     const staleDays = latestAt ? Math.floor((Date.now() - new Date(latestAt + 'Z').getTime()) / 86400000) : null;
-    /* 机器裁决 vs 人工打分：都用真实数据算，不粉饰。
+    /* 机器裁决与人工打分：都用真实数据算，不粉饰。
        这份快照里两者长期不一致（机器的通过门槛比人严）——这不是缺陷展示，
        而是「人工校准」模块存在的理由，值得摆在第一屏讲清楚。 */
     const judged = contents.filter(x => typeof x.quality_avg === 'number');
@@ -500,7 +500,7 @@ async function overview() {
           <div class="kpi-label">已产出内容市场 / 已建档市场</div></div>
       </div>
       ${humanAvg != null && machineAvg != null ? `<div class="panel align-panel">
-        <h3>机器裁决 vs 人工打分</h3>
+        <h3>机器裁决与人工打分</h3>
         <div class="impact-grid">
           <div class="impact-card"><h4>机器（总编 Agent）均分</h4>
             <div class="stat-big">${machineAvg.toFixed(1)}<span class="stat-suffix">/5</span></div>
@@ -512,7 +512,7 @@ async function overview() {
             <div class="impact-delta" style="font-size:12.5px">
               机器门槛比人严 ${(humanAvg - machineAvg).toFixed(1)} 分：不少被机器判「需修改」的内容，
               人读完认为已经可用。<b>这正说明自动裁决不能孤立使用</b>——
-              所以有了「人工校准」把人的判断回收成标准，再回到「系统进化」改 Prompt。
+              所以有了「人工校准」把人的判断回收成标准，再回到「系统进化」改提示词。
             </div>
             <div class="toolbar" style="margin-top:8px">
               <a class="btn ghost" href="#calibrate">去人工校准 →</a>
@@ -550,7 +550,7 @@ async function pipeline() {
     </p>
     <div class="job-box" id="job-box"></div>
     <div class="panel" id="tasks-panel"><h3>运行历史</h3><div class="loading">加载中…</div></div>
-    <div class="panel"><h3>失败案例库（BadCase）</h3>
+    <div class="panel"><h3>失败案例库</h3>
       <p class="muted" style="font-size:12px;margin-bottom:8px">
         每次被总编驳回或运行失败都会自动落一条案例，记录根因与已采取的修复动作——
         「已自愈」的那几条是在没有人工介入的情况下自动换题重试成功的。</p>
@@ -657,7 +657,7 @@ async function loadTasks() {
   } catch (e) { panel.innerHTML = errBox(e); }
 }
 
-/* 失败案例库：bad_cases 表一直有数据但前端零入口（PRD 里的 BadCase 库没做 UI） */
+/* 失败案例库：bad_cases 表一直有数据但前端零入口（产品设计里的失败案例库没做 UI） */
 async function loadBadCases() {
   const box = document.getElementById('badcases-panel');
   if (!box) return;
@@ -692,8 +692,8 @@ async function contents() {
     const mkOpts = mkts.markets.map(m => `<option value="${m.code}">${m.name} (${m.code})</option>`).join('');
     root.innerHTML = `
       <h1 class="page-title">内容</h1>
-      <p class="page-sub">每条内容 = 母稿 + 多形态派生 + 分发计划 + 完整 Trace
-        <span class="tag gray">演示知识库为合成 KB：部分实体/引语为教学用虚构，配置真实信源后自动消除</span></p>
+      <p class="page-sub">每条内容 = 母稿 + 多形态派生 + 分发计划 + 完整执行轨迹
+        <span class="tag gray">演示知识库为合成知识库：部分实体/引语为教学用虚构，配置真实信源后自动消除</span></p>
       <div class="toolbar">
         <select id="cf-mk"><option value="">全部市场</option>${mkOpts}</select>
         <select id="cf-st" title="按质量裁决筛选——列表里看到的就是这一列">
@@ -773,13 +773,13 @@ async function contentDetail(id) {
         ${c.verdict === 'revise' ? '<button id="btn-revise" class="btn-primary">按修改意见重写</button>' : ''}</p>
       ${c.verdict === 'revise' ? `<div id="revise-status" class="revise-status" style="display:none"></div>
         ${advice ? `<div class="panel revise-advice"><b>总编修改意见</b><br>${escMd(advice)}</div>` : ''}` : ''}
-      ${c.is_fallback ? '<div class="panel fallback-note">⚠ 本条为兜底路径产出（部分环节未走真实 LLM）。演示知识库为合成 KB，文中实体/引语可能为教学用虚构。</div>' : ''}
+      ${c.is_fallback ? '<div class="panel fallback-note">⚠ 本条为兜底路径产出（部分环节未走真实 LLM）。演示知识库为合成知识库，文中实体/引语可能为教学用虚构。</div>' : ''}
       <div class="tabs">
         <a data-tab="article" class="active">母稿</a><a data-tab="formats">多形态 (${Object.keys(c.formats || {}).length})</a>
         <a data-tab="dist">分发计划</a><a data-tab="brief">选题简报</a>
         <a data-tab="signals">信号源 (${(c.signals || []).length})</a>
         <span class="tabs-sep" title="以下是过程证据">证据</span>
-        <a data-tab="quality" class="tab-ev">质量</a><a data-tab="trace" class="tab-ev">Trace</a>
+        <a data-tab="quality" class="tab-ev">质量</a><a data-tab="trace" class="tab-ev">执行轨迹</a>
       </div>
       <div id="tab-body"></div>`;
     document.querySelectorAll('.tabs a').forEach(a => a.onclick = () => {
@@ -790,7 +790,7 @@ async function contentDetail(id) {
     });
     const btnRevise = document.getElementById('btn-revise');
     if (btnRevise) btnRevise.onclick = () => {
-      if (!confirmCostly('重写将按总编修改意见重跑 Writer → 事实核查 → 总编复核，并刷新多形态。')) return;
+      if (!confirmCostly('重写将按总编修改意见重跑 写作 → 事实核查 → 总编审核，并刷新多形态。')) return;
       startRevise(c.id, c.title);
     };
     ReviseState.paint();  // 还原进行中的重写状态（切回来不会"看起来停了"）
@@ -953,7 +953,7 @@ function renderBrief(c) {
   const z = (ZH.data && ZH.data.brief) || {};
   const avoid = biList(b.avoid, z.avoid);
   const kw = biList(b.keywords, z.keywords);
-  return `<div class="panel"><h3>AngleEditor 选题简报（AI 的"主编判断"）</h3>
+  return `<div class="panel"><h3>角度设计 · 选题简报（AI 的"主编判断"）</h3>
     ${zhBar(c)}
     <dl class="brief-grid">
       <dt>选题</dt><dd>${bi(b.topic, z.topic)}</dd>
@@ -961,7 +961,7 @@ function renderBrief(c) {
       <dt>钩子</dt><dd>${bi(b.hook, z.hook)}</dd>
       <dt>受众</dt><dd>${bi(b.audience, z.audience)}</dd>
       <dt>风格</dt><dd><span class="tag gray">${esc(STYLE_LABEL[b.style] || b.style || '—')}</span></dd>
-      <dt>why now</dt><dd>${bi(b.why_now, z.why_now)}</dd>
+      <dt>为何是现在</dt><dd>${bi(b.why_now, z.why_now)}</dd>
       <dt>避免事项</dt><dd>${avoid.length ? avoid.map(a => `<span class="tag red block">${a}</span>`).join('') : '—'}</dd>
       <dt>检索关键词</dt><dd>${kw.length ? kw.map(k => `<span class="tag gray block">${k}</span>`).join('') : '—'}</dd>
       <dt>形态计划</dt><dd>${(b.format_plan || []).map(f => `<span class="tag">${esc(FMT_META[f]?.label || f)}</span>`).join('') || '—'}</dd>
@@ -994,7 +994,7 @@ function verdictTag(v) {
   return `<span class="tag ${VERDICT_TAG[v] || 'gray'}">${esc(VERDICT_LABEL[v] || v)}</span>`;
 }
 
-/* ---------- 真实信号溯源：展示 SignalScout 实时抓取的源头（来源/时间/真实互动/原文链接） ---------- */
+/* ---------- 真实信号溯源：展示信号捕捉环节实时抓取的源头（来源/时间/真实互动/原文链接） ---------- */
 function renderSignals(c) {
   const sigs = c.signals || [];
   if (!sigs.length) return '<div class="panel">本次内容未关联实时真实信号（可能由兜底路径从本地 KB 生成）。</div>';
@@ -1020,7 +1020,7 @@ function renderSignals(c) {
     </li>`;
   }).join('');
   return `<div class="panel"><h3>驱动本内容的实时真实信号</h3>
-    <p class="muted">信号由 SignalScout 从 Hacker News / Dev.to / GDELT 等公开源实时抓取，互动数据为真实人类消费行为。下方链接可点击溯源。</p>
+    <p class="muted">信号由「信号捕捉」环节从 Hacker News / Dev.to / GDELT 等公开源实时抓取，互动数据为真实人类消费行为。下方链接可点击溯源。</p>
     <ul class="sig-list">${items}</ul></div>`;
 }
 
@@ -1035,7 +1035,7 @@ function renderFormats(c) {
       ${fmtBody(k, v, zf[k] || {})}
     </div>`;
   }).join('');
-  return `<div class="panel"><h3>FormatAdapter 一稿多发（${Object.keys(fmts).length} 种形态）</h3>
+  return `<div class="panel"><h3>形态适配 · 一稿多发（${Object.keys(fmts).length} 种形态）</h3>
     ${zhBar(c)}${blocks}</div>`;
 }
 
@@ -1062,7 +1062,7 @@ function fmtVideo(v, z) {
     `<span class="tag">${bi(String(h).replace(/^#/, '#'), (z.hashtags || [])[i])}</span>`).join('');
   return `${v.hook ? `<div class="fmt-hook"><span class="fmt-k">钩子</span>${bi(v.hook, z.hook)}</div>` : ''}
     ${tbl}
-    ${v.cta ? `<div class="fmt-row"><span class="fmt-k">CTA</span><span>${bi(v.cta, z.cta)}</span></div>` : ''}
+    ${v.cta ? `<div class="fmt-row"><span class="fmt-k">行动号召</span><span>${bi(v.cta, z.cta)}</span></div>` : ''}
     ${tags ? `<div class="fmt-row"><span class="fmt-k">话题标签</span><span>${tags}</span></div>` : ''}`;
 }
 
@@ -1091,7 +1091,7 @@ const VAL_LABELS = {
 };
 const KV_LABELS = {
   title: '标题', headline: '标题', body: '正文', text: '正文', summary: '摘要',
-  hook: '钩子', cta: 'CTA', question: '提问', angles: '讨论角度', points: '要点',
+  hook: '钩子', cta: '行动号召', question: '提问', angles: '讨论角度', points: '要点',
   key_data: '关键数据', hashtags: '话题标签', scenes: '分镜', shot: '画面',
   voiceover: '口播', subtitle: '字幕', avg: '均分', verdict: '裁决',
   scores: '各维度评分', rubric: '评分标准', fact_check: '事实核查',
@@ -1214,7 +1214,7 @@ function renderDist(d) {
   if (!plan.length) return '<div class="panel">无分发计划</div>';
   const zd = (ZH.data && ZH.data.distribution) || {};
   const zplan = zd.plan || [];
-  return `<div class="panel"><h3>Distributor 分发计划</h3>${zhBar(ZH.content || {})}<table>
+  return `<div class="panel"><h3>分发策略 · 分发计划</h3>${zhBar(ZH.content || {})}<table>
     <tr><th>#</th><th>平台</th><th>形态</th><th>受众</th><th>时段</th><th>理由</th></tr>
     ${plan.map((p, i) => `<tr><td>${p.priority}</td>
       <td>${esc(platformLabel(p.platform))}</td>
@@ -1227,10 +1227,10 @@ function renderDist(d) {
 
 async function renderTrace(contentId) {
   const t = await API.trace(contentId);
-  return `<div class="panel"><h3>执行 Trace（${t.spans.length} 步 · 总耗时 ${(t.task.total_duration_ms / 1000).toFixed(0)}s · ¥${t.task.total_cost_cny.toFixed(4)} · 审核回退 ${t.task.review_rounds} 轮）</h3>
+  return `<div class="panel"><h3>执行轨迹（${t.spans.length} 步 · 总耗时 ${(t.task.total_duration_ms / 1000).toFixed(0)}s · ¥${t.task.total_cost_cny.toFixed(4)} · 审核回退 ${t.task.review_rounds} 轮）</h3>
     ${t.spans.map(s => `<div class="trace-step ${s.status}">
       <div class="agent">${esc(lb(s.agent))} ${statusTag(s.status)}</div>
-      <div class="meta">${esc(modelLabel(s.model))} · ${s.tokens_in}+${s.tokens_out} tokens · ${s.duration_ms}ms</div>
+      <div class="meta">${esc(modelLabel(s.model))} · 输入 ${s.tokens_in} + 输出 ${s.tokens_out} 词元 · ${s.duration_ms}ms</div>
       <div class="decision">${esc(s.decision_reason)}</div>
       ${(s.warnings || []).map(w => `<div class="meta" style="color:#e08a00">⚠ ${esc(w)}</div>`).join('')}
     </div>`).join('')}</div>`;
@@ -1298,15 +1298,15 @@ async function evalView() {
       API.analyticsOverview(EVAL_F.market), API.reports(), API.markets().catch(() => ({ markets: [] })),
     ]);
     const mktLabel = EVAL_F.market ? esc(EVAL_F.market) : '全部市场';
-    // 四个 KPI 全部来自 simulator.py（锚定真实信号分布的行为仿真）——必须自带角标，
+    // 四个 KPI 全部来自仿真器（锚定真实信号分布的行为仿真）——必须自带角标，
     // 不能让读的人误以为是真实分发数据（与分析中心口径一致）。
     const simBadge = '<span class="tag orange" title="数据来自仿真器，非真实分发数据">仿真</span>';
     root.innerHTML = `
       <h1 class="page-title">评估中心</h1>
-      <p class="page-sub">消费反馈 → 指标分析 → FeedbackAnalyst 迭代建议（闭环的最后一步）</p>
+      <p class="page-sub">消费反馈 → 指标分析 → 反馈分析迭代建议（闭环的最后一步）</p>
       <div class="panel sim-banner">
         ⚠️ <b>本页全部消费指标为仿真口径</b>：CTR / 完读率 / 互动率 / 负反馈率均来自
-        <code>simulator.py</code> 锚定真实信号分布拟合出的行为仿真（真实分发光标为平台私有数据，无法获取）。
+        仿真器锚定真实信号分布拟合出的行为仿真（真实分发光标为平台私有数据，无法获取）。
         每份仿真都带 <span class="tag orange">仿真</span> 角标，与分析中心口径一致。
       </div>
       <div class="toolbar">
@@ -1336,7 +1336,7 @@ async function evalView() {
             <b>暂无评估报告</b> —— 这不是功能缺失，而是这条链路要由人触发：
             <ol style="margin:8px 0 0 18px">
               <li>先在上面点「模拟消费事件」生成消费数据（仿真口径）；</li>
-              <li>再去 <a class="link" href="#closedloop">系统进化 → 迭代建议</a> 运行 FeedbackAnalyst，
+              <li>再去 <a class="link" href="#closedloop">系统进化 → 迭代建议</a> 运行反馈分析，
                   产出「发现 + 可采纳建议」；</li>
               <li>采纳后新版本即刻生效，并在同页「采纳效果回收」看到前后对比。</li>
             </ol></div>`}
@@ -1352,7 +1352,7 @@ async function evalView() {
         } catch (e) { toast(`模拟失败：${esc(e.message)}`, 'err'); }
       })();
     };
-    // FeedbackAnalyst 的唯一入口在「系统进化」页（本页只保留跳转），避免同动作两个入口
+    // 反馈分析的唯一入口在「系统进化」页（本页只保留跳转），避免同动作两个入口
     document.getElementById('ov-mk').onchange = (e) => { EVAL_F.market = e.target.value; evalView(); };
   } catch (e) { root.innerHTML = errBox(e); }
 }
@@ -1365,7 +1365,7 @@ async function kbView() {
     root.innerHTML = `
       <h1 class="page-title">知识库</h1>
       <p class="page-sub">BM25 检索 · 全部事实可溯源（LLM 不联网，知识库是唯一事实来源）
-        <span class="tag orange">合成 KB</span></p>
+        <span class="tag orange">合成知识库</span></p>
       <div class="panel synthetic-note">⚠️ 演示文档为教学用合成语料：部分实体、引语为虚构，用于演示检索与治理链路。
         配置真实信源后同一套流程即可接入真实语料。</div>
       <div class="cards">
@@ -1380,7 +1380,7 @@ async function kbView() {
       <div class="panel"><h3>知识库治理（AI 提议 · 人审闸门）</h3>
         <div id="kb-fresh" class="loading">加载新鲜度…</div>
         <div class="toolbar" style="margin-top:14px">
-          <button class="btn" id="kb-curate">运行 KBCurator 策展</button>
+          <button class="btn" id="kb-curate">运行知识库策展</button>
           <button class="btn ghost" id="kb-reload">刷新</button>
         </div>
         <div id="kb-patch"></div>
@@ -1396,14 +1396,14 @@ async function kbView() {
         box.innerHTML = r.results.map((e, i) =>
           `<div class="finding"><span class="rank">#${i + 1}</span> <b>${esc(e.doc_title)}</b>
            <span class="tag gray">${esc(e.source)}</span>${e.published_at ? ` <span class="tag gray">${esc(String(e.published_at).slice(0, 10))}</span>` : ''}${e.credibility ? ` <span class="tag gray">可信度 ${e.credibility}</span>` : ''}
-           ${e.is_stale ? '<span class="tag orange">⚠ 待核实</span>' : ''} · score ${e.score}<br>
+           ${e.is_stale ? '<span class="tag orange">⚠ 待核实</span>' : ''} · 相关度 ${e.score}<br>
          <span style="color:#77809a">${esc(e.text.slice(0, 140))}${e.text.length > 140 ? '…' : ''}</span></div>`).join('') || '无结果';
       } catch (e) { box.innerHTML = errBox(e); }
     };
     document.getElementById('kb-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
     document.getElementById('kb-go').onclick = doSearch;
     document.getElementById('kb-curate').onclick = () => {
-      if (!confirmCostly('运行 KBCurator 将调用一次 LLM 生成策展补丁（AI 只提议、人审后才入库）。')) return;
+      if (!confirmCostly('运行知识库策展将调用一次 LLM 生成补丁（AI 只提议、人审后才入库）。')) return;
       runCurate();
     };
     document.getElementById('kb-reload').onclick = () => loadGovernance();
@@ -1453,7 +1453,7 @@ async function loadGovernance() {
 
 async function runCurate() {
   const box = document.getElementById('kb-patch');
-  box.innerHTML = 'KBCurator 扫描中…';
+  box.innerHTML = '知识库策展扫描中…';
   try {
     const r = await API.kbCurate();
     renderPatch({ ...r, status: 'pending', created_at: '' });
@@ -1466,7 +1466,7 @@ function renderPatch(p) {
   const box = document.getElementById('kb-patch');
   if (!box) return;
   if (!p || !p.items || !p.items.length) {
-    box.innerHTML = '<span style="color:#77809a;font-size:12px">暂无待审补丁（先点「运行 KBCurator 策展」）</span>';
+    box.innerHTML = '<span style="color:#77809a;font-size:12px">暂无待审补丁（先点「运行知识库策展」）</span>';
     return;
   }
   box.innerHTML = `<div style="margin:6px 0 8px"><b>待审补丁</b> <span class="tag orange">${esc(STATUS_CN[p.status] || p.status)}</span></div>
@@ -1530,7 +1530,7 @@ async function analyticsView() {
         <span class="tag gray" id="an-count"></span>
         <button class="btn ghost" id="btn-refresh-analytics">⟳ 刷新</button>
       </div>
-      <p class="muted" style="font-size:12px;margin-bottom:10px">市场筛选作用于含市场维度的图表（QSR / 成本 / Rubric / 形态×市场 / 衰减曲线）；全局口径图表（漏斗 / FPY / Agent 降级率 / 时长）保持不变。</p>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">市场筛选作用于含市场维度的图表（QSR / 成本 / 五维评分 / 形态×市场 / 衰减曲线）；全局口径图表（漏斗 / FPY / 降级率 / 时长）保持不变。</p>
       <div id="charts-root"></div>`;
     document.getElementById('an-mk').onchange = (e) => { ANALYTICS_MKT_FILTER.market = e.target.value; renderAnalytics(); };
     document.getElementById('btn-refresh-analytics').onclick = analyticsView;
@@ -1743,7 +1743,7 @@ function svgLine(c) {
     if (n <= 8 || i % Math.ceil(n / 8) === 0)
       s += `<text x="${(padL + i * xstep).toFixed(1)}" y="${H - padB + 13}" text-anchor="middle" font-size="9" fill="#778">${esc(stageLabel(lb))}</text>`;
   });
-  // 图例：Rubric 五维这类内部维度（小写枚举）翻译；市场代码（US/JP…）保持原样
+  // 图例：五维评分这类内部维度（小写枚举）翻译；市场代码（US/JP…）保持原样
   let leg = series.map((ser, si) => `<span class="lg"><i style="background:${CHART_COLORS[si % CHART_COLORS.length]}"></i>${esc(lbEnum(ser.name))}</span>`).join('');
   return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg">${s}</svg><div class="legend">${leg}</div>`;
 }
@@ -1792,7 +1792,7 @@ function errBox(e) { return `<div class="panel" style="color:#d43d3d">加载失�
 
 /* ---------- 系统进化（M3，原「迭代闭环」） ----------
    相比旧版的三处改动：
-   1. 说人话：模板/版本/来源全部走中文标签，不再满屏 writer / v1 / diff；
+   1. 说人话：模板/版本/来源全部走中文标签，不再满屏内部代号 / v1 / 版本差异；
    2. 补上闭环第四段「效果回收」——采纳之后到底变好了没有，用运行时数据回答
       （闭环第一版缺的就是这一段，点了采纳"没反应"的体感正来源于此）；
    3. A/B 不再用仿真的 CTR 替用户判胜负（CTR 由质量分派生 = 循环论证），
@@ -1806,13 +1806,13 @@ async function closedLoopView() {
       API.promptTemplates(), API.markets().catch(() => ({ markets: [] })),
     ]);
     const mkOpts = mkts.markets.map(m => `<option value="${esc(m.code)}">${esc(m.name)} (${esc(m.code)})</option>`).join('');
-    const tplOpts = tpls.templates.map(t => `<option value="${esc(t)}">${esc(lb(t))} <span>（${esc(t)}）</span></option>`).join('');
+    const tplOpts = tpls.templates.map(t => `<option value="${esc(t)}">${esc(lb(t))}</option>`).join('');
     root.innerHTML = `
       <h1 class="page-title">系统进化</h1>
       <p class="page-sub">这里决定 AI 下一轮怎么写。<b>所有改动都由你确认后才生效，随时可回滚。</b>
         链路：① AI 提议 → ② 你拍板采纳（即刻生效）→ ③ 效果回收对比是否有改善 → ④ 不行就回滚。</p>
       <div class="panel"><h3>① 迭代建议（AI 提议 · 人审闸门）</h3>
-        <p class="muted" style="font-size:12px;margin-bottom:8px">FeedbackAnalyst 读消费数据后给出「改哪里 + 为什么改 + 改完长什么样」，
+        <p class="muted" style="font-size:12px;margin-bottom:8px">反馈分析读消费数据后给出「改哪里 + 为什么改 + 改完长什么样」，
           它只提议，不会自己改系统——这也是全站唯一运行它的入口。</p>
         <div class="toolbar">
           <select id="cl-market">${mkOpts}</select>
@@ -1827,7 +1827,7 @@ async function closedLoopView() {
         </div>
         <div id="cl-suggestions" class="loading">加载中…</div>
       </div>
-      <div class="panel"><h3>② Prompt 版本治理（采纳 / 回滚 / diff）</h3>
+      <div class="panel"><h3>② 提示词版本治理（采纳 / 回滚 / 版本对比）</h3>
         <p class="muted" style="font-size:12px;margin-bottom:8px">采纳走运行时覆盖层：<b>无需重启、无需重新部署</b>，下一次供给立刻用新版本。</p>
         <div class="toolbar">
           <select id="cl-tpl"></select>
@@ -1838,25 +1838,25 @@ async function closedLoopView() {
       </div>
       <div class="panel"><h3>③ 采纳效果回收（采纳之后，到底变好了没有）</h3>
         <p class="muted" style="font-size:12px;margin-bottom:8px">
-          口径：按运行记录里实际使用的 Prompt 版本分组，对比「用旧版跑出的内容」与「用采纳版跑出的内容」的质量均分 / 单条成本 / 裁决分布。
+          口径：按运行记录里实际使用的提示词版本分组，对比「用旧版跑出的内容」与「用采纳版跑出的内容」的质量均分 / 单条成本 / 裁决分布。
           数据全部来自真实运行落库，样本数如实标注——样本很小时它是信号，不是结论。</p>
         <div id="cl-impact" class="loading">加载中…</div>
       </div>
-      <div class="panel"><h3>④ A/B 对比（同一选题 · 两版 Prompt · 你来拍板）</h3>
-        <p class="muted" style="font-size:12px;margin-bottom:8px">⚠ A/B 会用两版 Prompt 各完整跑一次写作链路（真实 LLM 额度，真机约数分钟）。
+      <div class="panel"><h3>④ A/B 对比（同一选题 · 两版提示词 · 你来拍板）</h3>
+        <p class="muted" style="font-size:12px;margin-bottom:8px">⚠ A/B 会用两版提示词各完整跑一次写作链路（真实 LLM 额度，真机约数分钟）。
           <b>任务在后台运行</b>：提交后即可切走，回来还能看到进度与结果。
           <b>系统不替你判胜负</b>：仿真的 CTR 由质量分派生再用它反证质量属于循环论证，因此 CTR 只作灰色参考。
           请以质量分与成本为准，看完直接点「选用这版」。</p>
         <div class="toolbar">
           <select id="cl-ab-tpl"></select>
           <select id="cl-ab-v1"><option value="">旧版</option></select>
-          <span style="align-self:center">vs</span>
+          <span style="align-self:center">对比</span>
           <select id="cl-ab-v2"><option value="">新版</option></select>
           <input id="cl-ab-angle" placeholder="选题 / 角度（如：AI 监管）" style="width:200px">
           <select id="cl-ab-market">${mkOpts}</select>
           <button class="btn" id="cl-ab-run">运行 A/B</button>
         </div>
-        <div id="cl-ab-result">选择两版 Prompt 并输入选题后运行</div>
+        <div id="cl-ab-result">选择两版提示词并输入选题后运行</div>
       </div>`;
     document.getElementById('cl-tpl').innerHTML = tplOpts;
     document.getElementById('cl-ab-tpl').innerHTML = tplOpts;
@@ -1884,7 +1884,7 @@ async function loadAdoptionImpact() {
     const items = r.adoptions || [];
     if (!items.length) {
       box.innerHTML = `<div class="chart-zero">还没有任何 AI 提议被采纳。<br>
-        先在 ① 里运行反馈分析并采纳一条建议，之后这里会自动给出「采纳前 vs 采纳后」的对比。</div>`;
+        先在 ① 里运行反馈分析并采纳一条建议，之后这里会自动给出「采纳前与采纳后」的对比。</div>`;
       return;
     }
     const fmt = (v, suffix = '') => (v === null || v === undefined) ? '<span class="muted">—</span>' : `<b>${v}${suffix}</b>`;
@@ -1922,7 +1922,7 @@ async function loadAdoptionImpact() {
 
 async function runFeedback() {
   const box = document.getElementById('cl-suggestions');
-  box.innerHTML = 'FeedbackAnalyst 分析中…（消费数据 → 结构化建议，可能 10-30s）';
+  box.innerHTML = '反馈分析中…（消费数据 → 结构化建议，可能 10-30s）';
   try {
     const market = document.getElementById('cl-market').value || 'US';
     const r = await API.promptFeedback(market);
@@ -1936,7 +1936,7 @@ async function loadSuggestions() {
   try {
     const r = await API.promptSuggestions(CL_F.sugStatus);
     const sugs = r.suggestions || [];
-    if (!sugs.length) { box.innerHTML = `<span style="color:#77809a;font-size:12px">暂无${{ pending: '待审', adopted: '已采纳', rejected: '已拒绝' }[CL_F.sugStatus] || ''}建议（可点「运行 FeedbackAnalyst」生成，或切换状态查看历史）</span>`; return; }
+    if (!sugs.length) { box.innerHTML = `<span style="color:#77809a;font-size:12px">暂无${{ pending: '待审', adopted: '已采纳', rejected: '已拒绝' }[CL_F.sugStatus] || ''}建议（可点「运行反馈分析」生成，或切换状态查看历史）</span>`; return; }
     box.innerHTML = sugs.map(s => `
       <div class="finding" style="background:#eef4ff;border-left:3px solid #3a6df0">
         <span class="tag blue">建议改：${esc(lb(s.target_template))}</span>
@@ -1946,7 +1946,7 @@ async function loadSuggestions() {
         <span class="tag gray">${esc(s.market || '')} · ${fmtTime(s.created_at)}</span>
         <div style="margin:6px 0 4px"><b>改法：</b>${esc(s.proposed_change)}</div>
         <div style="font-size:12px;color:#55607a">理由：${esc(s.rationale)}</div>
-        <details style="margin-top:6px"><summary style="cursor:pointer;color:#3a6df0;font-size:12px">查看 AI 提议的完整新版 Prompt</summary>
+        <details style="margin-top:6px"><summary style="cursor:pointer;color:#3a6df0;font-size:12px">查看 AI 提议的完整新版提示词</summary>
           <pre class="diff" style="max-height:200px;overflow:auto">${esc(s.new_prompt)}</pre></details>
         ${s.status === 'pending' ? `<div class="toolbar" style="margin-top:6px">
           <button class="btn" data-adopt="${s.id}">✅ 采纳（生成新版本并即刻生效）</button>
@@ -2008,7 +2008,7 @@ async function loadVersions(tpl) {
         pre.style.display = 'block';
         pre.textContent = d.diff || '（无差异）';
         pre.scrollIntoView({ behavior: 'smooth' });
-      } catch (e) { toast(`diff 失败：${esc(e.message)}`, 'err'); }
+      } catch (e) { toast(`版本对比失败：${esc(e.message)}`, 'err'); }
     });
   } catch (e) { box.innerHTML = errBox(e); }
 }
@@ -2032,7 +2032,7 @@ async function loadAbVersions(tpl) {
     } else {
       if (run) {
         run.disabled = true;
-        run.title = '该模板目前只有 1 个 Prompt 版本，无法对比';
+        run.title = '该模板目前只有 1 个提示词版本，无法对比';
       }
       toast(`${esc(lb(tpl))} 目前只有 ${vs.length} 个版本，A/B 需要两版。先在 ① 运行反馈分析并采纳一条建议（或手动新建版本）`, 'err', 6000);
     }
@@ -2046,7 +2046,7 @@ function paintAbPanel() {
   ABState.paint(true);
   if (!ABState.job) {
     const box = document.getElementById('cl-ab-result');
-    if (box) box.innerHTML = '选择两版 Prompt 并输入选题后运行';
+    if (box) box.innerHTML = '选择两版提示词并输入选题后运行';
   }
 }
 
@@ -2056,11 +2056,11 @@ async function runAB() {
   const v2 = document.getElementById('cl-ab-v2').value;
   const angle = document.getElementById('cl-ab-angle').value.trim();
   const market = document.getElementById('cl-ab-market').value || 'US';
-  if (!v1 || !v2) { toast('请为参与对比的两版各选一个 Prompt 版本', 'err'); return; }
+  if (!v1 || !v2) { toast('请为参与对比的两版各选一个提示词版本', 'err'); return; }
   if (v1 === v2) { toast('两版选的是同一个版本，无法对比', 'err'); return; }
   if (!angle) { toast('请填写选题 / 角度', 'err'); return; }
   if (ABState.running()) { toast('已有 A/B 在跑，请等它出结果', 'err'); return; }
-  if (!confirmCostly(`A/B 将用两版 Prompt 各跑一次完整写作链路（市场 ${market}）。\n真机约数分钟，任务在后台运行，不用守着页面。`)) return;
+  if (!confirmCostly(`A/B 将用两版提示词各跑一次完整写作链路（市场 ${market}）。\n真机约数分钟，任务在后台运行，不用守着页面。`)) return;
   ABState.set({ status: 'starting', job_id: null, progress: '已排队', result: null, error: null,
     meta: { market, template: tpl, angle }, started_at: Date.now() });
   try {
@@ -2160,7 +2160,7 @@ async function calibrateView() {
     calTotal = calSamples.length;
     let html = `<div class="panel"><h2>🔬 人工校准 · LLM 评委对齐</h2>
       <p class="muted">逐条阅读内容全文，按五维直觉打分（1–5，支持 0.5 半分）。评委分对你不可见（避免锚定）。
-      每篇五维都评完会自动标记为「已评」；最后点页面底部的「提交 N 篇已评」即可——后端将你的打分与 EditorAgent 评委分做 Spearman 对齐并生成报告。可只评几篇就提交。
+      每篇五维都评完会自动标记为「已评」；最后点页面底部的「提交 N 篇已评」即可——后端将你的打分与机器评委分做 Spearman 对齐并生成报告。可只评几篇就提交。
       非中文内容可点「显示中文对照」切换阅读（需该内容已生成中文镜像）。</p>
       <div style="margin:10px 0 4px">评审人：
         <input list="cal-rater-list" id="cal-rater" class="input" value="Strange" style="width:200px" placeholder="输入或选择评审人">
@@ -2192,7 +2192,7 @@ async function calibrateView() {
         <div class="cal-excerpt" id="caltxt-${esc(s.id)}">${esc(s.excerpt)}</div>
         <div class="toolbar" style="margin:4px 0 8px">
           ${zhToggle}
-          <a class="link" href="#content/${esc(s.id)}" style="font-size:12px">打开全文与 Trace ↗</a>
+          <a class="link" href="#content/${esc(s.id)}" style="font-size:12px">打开全文与执行轨迹 ↗</a>
         </div>
         ${dims}
         <div class="card-actions">
