@@ -1,13 +1,17 @@
 # 兜底推送日志（Git Data API）
 
 认证为 strangeyu911-tech
-远端 main 当前： 7da63c19
-待重放提交： ['549ce5d']
+远端 main 当前： f54076b2
+待重放提交： ['01112e9']
 
---- 提交 549ce5d · 3 个文件 · docs: 整改记录 v1.2（含 Render 线上核验）；补入 API 兜底推送脚本与日志
-    blob docs/PRODUCT_AUDIT_FIX_v1.2.md (10680B, mode 100644)
-    blob docs/data/PUSH_VIA_API_LOG.md (2560B, mode 100644)
-    blob tools/push_via_api.py (6124B, mode 100644)
-    → commit 6eae691d
+--- 提交 01112e9 · 7 个文件 · fix(ab): A/B 改为后台任务+轮询，并修复版本下拉初始为空
+    blob src/app/api/routers/prompts.py (13070B, mode 100644)
+    blob src/app/workflow/ab.py (8345B, mode 100644)
+    blob tools/fetch_fixtures.py (1567B, mode 100644)
+    blob tools/smoke_render.js (12805B, mode 100644)
+    blob ui/console/assets/api.js (4679B, mode 100644)
+    blob ui/console/assets/app.js (129122B, mode 100644)
+    blob ui/console/index.html (1145B, mode 100644)
+    → commit e2647c61
 
-✅ main 已更新到 6eae691d（共 1 个提交）
+✅ main 已更新到 e2647c61（共 1 个提交）
