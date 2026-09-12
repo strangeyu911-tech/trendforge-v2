@@ -217,14 +217,14 @@ async function render(name, fn) {
 
   /* ---------- 关键整改点的可见性断言 ---------- */
   const checks = [
-    ['overview', '机器裁决 vs 人工打分', '人机对齐卡'],
+    ['overview', '机器裁决与人工打分', '人机对齐卡'],
     ['overview', '已产出内容市场 / 已建档市场', '市场口径改写'],
     ['contents', '全部裁决', '筛选改为按裁决'],
     ['contents', '需修改', '裁决标签上列表'],
     ['eval', '本页全部消费指标为仿真口径', '仿真口径横幅'],
     ['eval', '查看全部 →', false],
     ['eval', '生成迭代建议 →', '唯一入口跳转'],
-    ['kb', '合成 KB', '合成知识库角标'],
+    ['kb', '合成知识库', '合成知识库角标'],
     // 图表与 Tab 正文渲染在各自子容器里（真实 DOM 是该页的子节点，桩环境里是独立元素）
     ['root:charts-root', '四、消费表现', '图表分组'],
     ['root:charts-root', '技术细节 · 驱动此图的 SQL', 'SQL 折叠文案'],
@@ -235,6 +235,19 @@ async function render(name, fn) {
     ['closedloop', 'target_template', false],
     ['tab-body', '双语对照', '详情页双语对照条'],
     ['tab-body', 'class="seg on" data-zhmode="both"', '默认选中双语对照'],
+    // ---- 2026-09-12 全站文案中文化（v2.21）回归锁 ----
+    ['pipeline', '失败案例库', '失败案例库标题（去掉 BadCase）'],
+    ['pipeline', 'BadCase', false],
+    ['contents', '完整执行轨迹', '内容页副标题去 Trace'],
+    ['analytics', '五维评分', '分析中心图表口径中文化'],
+    ['analytics', 'Rubric', false],
+    ['analytics', '降级率', '降级率列名中文化'],
+    ['closedloop', '提示词版本治理', '提示词版本治理标题'],
+    ['closedloop', 'Prompt', false],
+    ['kb', '运行知识库策展', '知识库策展按钮（去掉 KBCurator）'],
+    ['kb', 'KBCurator', false],
+    ['eval', '反馈分析迭代建议', '评估中心副标题去 FeedbackAnalyst'],
+    ['eval', 'FeedbackAnalyst', false],
   ];
   for (const [view, needle, label] of checks) {
     const html = view.startsWith('root:') || view === 'tab-body'

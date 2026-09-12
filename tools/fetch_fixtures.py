@@ -11,7 +11,8 @@ FX = "D:/tmp/fx"
 ID = "b41a0c5c-053b-4477-aa55-6da25636d530"
 
 PATHS = [
-    "/health", "/markets", "/contents?limit=200", f"/contents/{ID}", f"/contents/{ID}/trace",
+    "/health", "/markets", "/contents?limit=200", "/contents?limit=5",
+    f"/contents/{ID}", f"/contents/{ID}/trace",
     "/pipeline/tasks?limit=50",
     "/prompts/suggestions?status=pending", "/prompts/suggestions?status=adopted",
     "/prompts/suggestions?status=all", "/prompts/templates",
